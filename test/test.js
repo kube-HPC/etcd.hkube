@@ -1,17 +1,17 @@
 const { should, expect } = require('chai');
 const Etcd = require('../lib/etcdDiscovery');
-const { done, callDone } = require('../mocha-done');
+const { done, callDone } = require('await-done');
 const sinon = require('sinon');
 const delay = require('await-delay');
 const uuidv4 = require('uuid/v4');
-
+const path = require('path');
 should();
 
 let etcd = new Etcd();
-xdescribe('etcd-tests', () => {
+describe('etcd-tests', () => {
     beforeEach(async () => {
         etcd = new Etcd();
-        await etcd.init({ etcd: { host: '127.0.0.1', port: 2379 }, serviceName: 'bla/bla' });
+        await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: 'bla/bla' });
     })
 
     describe('etcd-discovery', () => {
@@ -29,6 +29,7 @@ xdescribe('etcd-tests', () => {
             watch.watcher.on('set', d => {
                 setEvent();
             });
+
             watch.watcher.on('change', d => {
                 changeEvent();
                 callDone();
@@ -47,6 +48,7 @@ xdescribe('etcd-tests', () => {
             expect(setEvent.callCount).to.be.equal(5);
             expect(expireEvent.callCount).to.be.equal(0);
             expect(deleteEvent.callCount).to.be.equal(0);
+
 
         }).timeout(26000);
 
@@ -76,7 +78,7 @@ xdescribe('etcd-tests', () => {
             await etcd.discovery.register({ ttl: 4, interval: 2000, instanceId, data });
             let watch = await etcd.discovery.watch({ instanceId });
             watch.watcher.on('set', d => {
-                expect(JSON.parse(d.node.value).data).to.have.deep.keys(data)
+                expect(JSON.parse(d.node.value)).to.have.deep.keys(data)
                 data = { bla: 'bla2' };
                 etcd.discovery.updateRegisteredData(data);
                 setEvent();
@@ -92,7 +94,7 @@ xdescribe('etcd-tests', () => {
             let instanceId = `'etcd-set-get-test-${uuidv4()}`
             let etcdSet = await etcd.services.set({ data: { bla: 'bla' }, instanceId })
             let etcdGet = await etcd.services.get({ instanceId, prefix: 'services' })
-            expect(JSON.parse(etcdSet.node.value).data).to.have.deep.keys(JSON.parse(etcdGet.node.value).data)
+            expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
         }).timeout(10000);
     });
 })
@@ -101,25 +103,28 @@ xdescribe('etcd-tests', () => {
 describe('etcd test init with instanceId ', () => {
     let instanceId = '';
     let jobId = '';
+    let taskId = '';
     beforeEach(async () => {
         etcd = new Etcd();
         instanceId = `etcd-set-get-test-${uuidv4()}`;
         jobId = `jobid-${uuidv4()}`;
-        await etcd.init({ etcd: { host: '127.0.0.1', port: 2379 }, serviceName: 'bla/bla', instanceId, jobId });
+        taskId = `taskid-${uuidv4()}`;
+
+        await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: 'bla/bla', instanceId, jobId, taskId });
     })
-    xdescribe('services', () => {
+    describe('services', () => {
         it('should get instance id without specific instanceId as a set param', async () => {
             let etcdSet = await etcd.services.set({ data: { bla: 'bla' } })
             let etcdGet = await etcd.services.get({ instanceId, prefix: 'services' })
-            expect(JSON.parse(etcdSet.node.value).data).to.have.deep.keys(JSON.parse(etcdGet.node.value).data)
+            expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
         }).timeout(10000);
         it('should able to send suffix', async () => {
             let suffix = 'test'
             let etcdSet = await etcd.services.set({ data: { bla: 'bla' }, suffix })
             let etcdGet = await etcd.services.get({ instanceId, prefix: 'services', suffix })
-            expect(JSON.parse(etcdSet.node.value).data).to.have.deep.keys(JSON.parse(etcdGet.node.value).data)
+            expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
         }).timeout(10000);
-        
+
     });
     describe('etcdpipelineDriver api', () => {
         it('sould set and get tasks', async () => {
@@ -129,9 +134,27 @@ describe('etcd test init with instanceId ', () => {
             let data = { bla: 'bla' };
             let etcdSet = await pipelineDriver.setTaskState(taskId, data);
             let etcdGet = await pipelineDriver.getTaskState(taskId);
-            expect(JSON.parse(etcdSet.node.value).data).to.have.deep.keys(JSON.parse(etcdGet.node.value).data)
+            expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
         });
 
+    });
+    describe('jobs', () => {
+        describe('sets', () => {
+            it('should set results', async () => {
+                let etcdSet = await etcd.jobs.setTaskResult({ data: { bla: 'bla' } });
+                let etcdGet = await etcd.jobs.getTaskResult();
+                expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
+            }).timeout(3000);
+            it('should set status', async () => {
+                let etcdSet = await etcd.jobs.setTaskStatus({ data: { bla: 'bla' } });
+                let etcdGet = await etcd.jobs.getTaskStatus();
+                expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
+            }).timeout(3000);
+            it('should get jobs tasks', async () => {
+                let jobs = await etcd.jobs.getJobsTasks();
+                expect(jobs).to.be.equal(1);
+            }).timeout(3000);
+        });
     });
 })
 //etcdDiscovery.register({ ttl: 10, interval: 1000, servicePath: 'bla/bla', instanceId: '12345', data: { bla: 'bla' } })
