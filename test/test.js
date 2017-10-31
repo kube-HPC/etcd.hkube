@@ -165,6 +165,23 @@ describe('etcd test init with instanceId ', () => {
                 //expect(jobs).to.be.equal(1);
             });
         });
+        describe('watch', () => {
+            it('should onTaskResult', async () => {
+                //const taskID = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await etcd.jobs.onTaskResult({ taskId }, (result) => {
+                    expect(result).to.have.deep.keys(data)
+                });
+                etcd.jobs.setTaskResult(data);
+            });
+            it('should onJobResult', async () => {
+                const data = { bla: 'bla' };
+                await etcd.jobs.onJobResult((result) => {
+                    expect(result).to.have.deep.keys(data)
+                });
+                etcd.jobs.setJobResults({ data });
+            });
+        });
     });
 })
 //etcdDiscovery.register({ ttl: 10, interval: 1000, servicePath: 'bla/bla', instanceId: '12345', data: { bla: 'bla' } })
