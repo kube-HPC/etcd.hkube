@@ -108,12 +108,7 @@ describe('etcd test init with instanceId ', () => {
         instanceId = `etcd-set-get-test-${uuidv4()}`;
         jobId = `jobid-${uuidv4()}`;
         taskId = `taskid-${uuidv4()}`;
-
         await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME, instanceId, jobId, taskId });
-    });
-    after(async () => {
-        let { pipelineDriver } = etcd.services;
-        let etcdDelete = await pipelineDriver.deleteState();
     });
     describe('services', () => {
         it('should get instance id without specific instanceId as a set param', async () => {
@@ -134,52 +129,93 @@ describe('etcd test init with instanceId ', () => {
             let { pipelineDriver } = etcd.services;
             let taskId = `taskid-${uuidv4()}`;
             let data = { bla: 'bla' };
-            let etcdSet = await pipelineDriver.setTaskState(taskId, data);
-            let etcdGet = await pipelineDriver.getTaskState(taskId);
+            let etcdSet = await pipelineDriver.setTaskState({ taskId, data });
+            let etcdGet = await pipelineDriver.getTaskState({ taskId });
             expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(data);
         });
         it('should delete state', async () => {
             let { pipelineDriver } = etcd.services;
+            const jobId = `jobid-${uuidv4()}`;
             let taskId = `taskid-${uuidv4()}`;
             let data = { bla: 'bla' };
-            let etcdSet = await pipelineDriver.setState(data);
-            let etcdDelete = await pipelineDriver.deleteState();
-            let etcdGet = await pipelineDriver.getState();
+            let etcdSet = await pipelineDriver.setState({ jobId, taskId });
+            let etcdDelete = await pipelineDriver.deleteState({ jobId });
+            let etcdGet = await pipelineDriver.getState({ jobId });
             expect(etcdGet).to.equal(null);
         });
     });
     describe('jobs', () => {
         describe('sets', () => {
-            it('should set results', async () => {
-                let etcdSet = await etcd.jobs.setTaskResult({ bla: 'bla' });
-                let etcdGet = await etcd.jobs.getTaskResult();
-                expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
+            it('should set job results', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                let etcdSet = await etcd.jobs.setResults({ data: data, jobId: jobId });
+                let etcdGet = await etcd.jobs.getResult({ jobId: jobId });
+                expect(etcdSet.node.key).to.equal(`/jobs/jobResults/${jobId}/result`);
+                expect(etcdGet).to.have.deep.keys(data)
             });
             it('should set status', async () => {
-                let etcdSet = await etcd.jobs.setTaskStatus({ bla: 'bla' });
-                let etcdGet = await etcd.jobs.getTaskStatus();
-                expect(JSON.parse(etcdSet.node.value)).to.have.deep.keys(JSON.parse(etcdGet.node.value))
-            });
-            it('should get jobs tasks', async () => {
-                let jobs = await etcd.jobs.getJobsTasks();
-                //expect(jobs).to.be.equal(1);
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { status: 'completed' };
+                let etcdSet = await etcd.jobs.setStatus({ data: data, jobId: jobId });
+                let etcdGet = await etcd.jobs.getStatus({ jobId: jobId });
+                expect(etcdSet.node.key).to.equal(`/jobs/jobResults/${jobId}/status`);
+                expect(etcdGet).to.have.deep.keys(data);
             });
         });
         describe('watch', () => {
-            it('should onTaskResult', async () => {
-                //const taskID = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await etcd.jobs.onTaskResult({ taskId }, (result) => {
-                    expect(result).to.have.deep.keys(data)
-                });
-                etcd.jobs.setTaskResult(data);
-            });
             it('should onJobResult', async () => {
                 const data = { bla: 'bla' };
-                await etcd.jobs.onJobResult((result) => {
+                const jobId = `jobid-${uuidv4()}`;
+                await etcd.jobs.onResult({ jobId }, (res) => {
+                    expect(res.jobId).to.equal(jobId);
+                    expect(res.result).to.have.deep.keys(data);
+                });
+                etcd.jobs.setResults({ data, jobId: jobId });
+            });
+        });
+    });
+    describe('tasks', () => {
+        describe('sets', () => {
+            it('should set results', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                const etcdSet = await etcd.tasks.setResult({ jobId, taskId, data });
+                const etcdGet = await etcd.tasks.getResult({ jobId, taskId });
+                expect(etcdGet).to.have.deep.keys(data);
+            });
+            it('should set status', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                let etcdSet = await etcd.tasks.setStatus({ jobId, taskId, data });
+                let etcdGet = await etcd.tasks.getStatus({ jobId, taskId });
+                expect(etcdGet).to.have.deep.keys(data);
+            });
+            it('should get jobs tasks', async () => {
+                let list = await etcd.tasks.list({ jobId });
+                expect(list).to.be.equal(null);
+            });
+        });
+        describe('watch', () => {
+            it('should onResult', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await etcd.tasks.onResult({ jobId, taskId }, (result) => {
                     expect(result).to.have.deep.keys(data)
                 });
-                etcd.jobs.setJobResults({ data });
+                etcd.tasks.setResult(data);
+            });
+            it('should onStatus', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await etcd.tasks.onStatus({ jobId, taskId }, (result) => {
+                    expect(result).to.have.deep.keys(data)
+                });
+                etcd.tasks.setStatus(data);
             });
         });
     });
