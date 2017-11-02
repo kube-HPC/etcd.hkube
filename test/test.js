@@ -146,7 +146,7 @@ describe('etcd test init with instanceId ', () => {
     });
     describe('jobs', () => {
         describe('sets', () => {
-            it('should set job results', async () => {
+            it('should set results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 let etcdSet = await etcd.jobs.setResults({ data: data, jobId: jobId });
@@ -169,7 +169,7 @@ describe('etcd test init with instanceId ', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 await etcd.jobs.onResult({ jobId }, (res) => {
                     expect(res.jobId).to.equal(jobId);
-                    expect(res.result).to.have.deep.keys(data);
+                    expect(res.data).to.have.deep.keys(data);
                 });
                 etcd.jobs.setResults({ data, jobId: jobId });
             });
@@ -217,6 +217,27 @@ describe('etcd test init with instanceId ', () => {
                     expect(result).to.have.deep.keys(data)
                 });
                 etcd.tasks.setStatus(data);
+            });
+        });
+    });
+    describe('pipelines', () => {
+        describe('sets', () => {
+            it('should set results', async () => {
+                const name = `pipeline-1`;
+                const data = { bla: 'bla' };
+                const etcdSet = await etcd.pipelines.setPipeline({ name, data });
+                const etcdGet = await etcd.pipelines.getPipeline({ name });
+                expect(etcdGet).to.have.deep.keys(data);
+            });
+        });
+        describe('watch', () => {
+            it('should onResult', async () => {
+                const name = `pipeline-2`;
+                const data = { bla: 'bla' };
+                await etcd.pipelines.onPipelineSet({ name }, (result) => {
+                    expect(result.data).to.have.deep.keys(data)
+                });
+                etcd.pipelines.setPipeline({ name, data });
             });
         });
     });
