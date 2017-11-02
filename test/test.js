@@ -180,18 +180,19 @@ describe('etcd test init with instanceId ', () => {
             it('should set results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                const etcdSet = await etcd.tasks.setResult({ jobId, taskId, data });
+                const result = { bla: 'bla' };
+                const etcdSet = await etcd.tasks.setResult({ jobId, taskId, result });
                 const etcdGet = await etcd.tasks.getResult({ jobId, taskId });
-                expect(etcdGet).to.have.deep.keys(data);
+                expect(etcdGet).to.have.deep.keys(result);
             });
             it('should set status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                let etcdSet = await etcd.tasks.setStatus({ jobId, taskId, data });
+                const status = 'completed';
+                const error = 'stam error';
+                let etcdSet = await etcd.tasks.setStatus({ jobId, taskId, status, error });
                 let etcdGet = await etcd.tasks.getStatus({ jobId, taskId });
-                expect(etcdGet).to.have.deep.keys(data);
+                expect(etcdGet).to.have.deep.keys({ status, error });
             });
             it('should get jobs tasks', async () => {
                 let list = await etcd.tasks.list({ jobId });
