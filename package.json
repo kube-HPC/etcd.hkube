@@ -2,7 +2,7 @@
   "name": "etcd.rf",
   "version": "2.1.19",
   "description": "",
-  "main": "./lib/etcdDiscovery",
+  "main": "../lib/discovery/etcdDiscovery",
   "scripts": {
     "test": "mocha test --colors --recursive"
   },
