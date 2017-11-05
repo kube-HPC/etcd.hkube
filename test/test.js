@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const Etcd = require('../lib/etcdDiscovery');
+const Etcd = require('../lib/discovery/etcdDiscovery');
 const { done, callDone } = require('await-done');
 const sinon = require('sinon');
 const delay = require('await-delay');
