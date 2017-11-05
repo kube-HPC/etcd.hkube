@@ -8,7 +8,7 @@ const path = require('path');
 let etcd = new Etcd();
 const SERVICE_NAME = 'my-test-service';
 
-xdescribe('etcd-tests', () => {
+describe('etcd-tests', () => {
     beforeEach(async () => {
         etcd = new Etcd();
         await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
@@ -110,7 +110,7 @@ describe('etcd test init with instanceId ', () => {
         taskId = `taskid-${uuidv4()}`;
         await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME, instanceId, jobId, taskId });
     });
-    xdescribe('services', () => {
+    describe('services', () => {
         it('should get instance id without specific instanceId as a set param', async () => {
             let etcdSet = await etcd.services.set({ data: { bla: 'bla' } })
             let etcdGet = await etcd.services.get({ instanceId, prefix: 'services' })
@@ -124,7 +124,7 @@ describe('etcd test init with instanceId ', () => {
         }).timeout(10000);
 
     });
-    xdescribe('pipeline driver api', () => {
+    describe('pipeline driver api', () => {
         it('should set and get tasks', async () => {
             let { pipelineDriver } = etcd.services;
             let taskId = `taskid-${uuidv4()}`;
@@ -146,7 +146,7 @@ describe('etcd test init with instanceId ', () => {
     });
     describe('jobs', () => {
         describe('sets', () => {
-            xit('should set results', async () => {
+            it('should set results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 let etcdSet = await etcd.jobs.setResults({ data: data, jobId: jobId });
@@ -161,14 +161,14 @@ describe('etcd test init with instanceId ', () => {
                 const status = 'completed';
                 await etcd.jobs.setResults({ data: data, jobId: jobId1 });
                 await etcd.jobs.setResults({ data: data, jobId: jobId2 });
-                await etcd.jobs.setStatus({ data: { status: 'failed' }, jobId: jobId1 });
-                await etcd.jobs.setStatus({ data: { status: 'completed' }, jobId: jobId2 });
+                await etcd.jobs.setStatus({ data: 'failed', jobId: jobId1 });
+                await etcd.jobs.setStatus({ data: 'completed', jobId: jobId2 });
 
                 let etcdGet = await etcd.jobs.getResultsByStatus({ status: status });
-                expect(etcdGet).to.have.deep.keys(data);
+                expect(etcdGet[0].status).to.equal(status);
 
             });
-            xit('should set status', async () => {
+            it('should set status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { status: 'completed' };
                 let etcdSet = await etcd.jobs.setStatus({ data: data, jobId: jobId });
@@ -177,7 +177,7 @@ describe('etcd test init with instanceId ', () => {
                 expect(etcdGet).to.have.deep.keys(data);
             });
         });
-        xdescribe('watch', () => {
+        describe('watch', () => {
             it('should onJobResult', async () => {
                 const data = { bla: 'bla' };
                 const jobId = `jobid-${uuidv4()}`;
@@ -189,7 +189,7 @@ describe('etcd test init with instanceId ', () => {
             });
         });
     });
-    xdescribe('tasks', () => {
+    describe('tasks', () => {
         describe('sets', () => {
             it('should set results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
@@ -234,7 +234,7 @@ describe('etcd test init with instanceId ', () => {
             });
         });
     });
-    xdescribe('pipelines', () => {
+    describe('pipelines', () => {
         describe('sets', () => {
             it('should set results', async () => {
                 const name = `pipeline-1`;
