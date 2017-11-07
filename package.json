@@ -1,6 +1,6 @@
 {
   "name": "etcd.rf",
-  "version": "2.1.23",
+  "version": "2.1.24",
   "description": "",
   "main": "../lib/discovery/etcdDiscovery",
   "scripts": {
