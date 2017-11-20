@@ -249,20 +249,20 @@ describe('etcd test init with instanceId ', () => {
             it('should onResult', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await etcd.tasks.onResult({ jobId, taskId }, (result) => {
-                    expect(result).to.have.deep.keys(data)
+                const result = { bla: 'bla' };
+                await etcd.tasks.onChange({ jobId, taskId }, (res) => {
+                    expect(result).to.have.deep.keys(res.result)
                 });
-                etcd.tasks.setResult(data);
+                etcd.tasks.setResult({ jobId, taskId, result });
             });
             it('should onStatus', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await etcd.tasks.onStatus({ jobId, taskId }, (result) => {
+                const data = { status: 'failed', error: 'oohhh nooo' };
+                await etcd.tasks.onChange({ jobId, taskId }, (result) => {
                     expect(result).to.have.deep.keys(data)
                 });
-                etcd.tasks.setStatus(data);
+                etcd.tasks.setStatus({ jobId, taskId, status: data.status, error: data.error });
             });
         });
     });
@@ -291,26 +291,6 @@ describe('etcd test init with instanceId ', () => {
                 const etcdSet = await etcd.execution.setExecution({ jobId: jobID, data: pipeline });
                 const etcdGet = await etcd.execution.getExecution({ jobId: jobID });
                 expect(pipeline).to.have.deep.keys(etcdGet);
-            });
-        });
-        describe('watch', () => {
-            it('should onResult', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await etcd.tasks.onResult({ jobId, taskId }, (result) => {
-                    expect(result).to.have.deep.keys(data)
-                });
-                etcd.tasks.setResult(data);
-            });
-            it('should onStatus', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await etcd.tasks.onStatus({ jobId, taskId }, (result) => {
-                    expect(result).to.have.deep.keys(data)
-                });
-                etcd.tasks.setStatus(data);
             });
         });
     });
