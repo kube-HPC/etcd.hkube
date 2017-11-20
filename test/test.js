@@ -266,6 +266,54 @@ describe('etcd test init with instanceId ', () => {
             });
         });
     });
+    describe('execution', () => {
+        describe('sets', () => {
+            const jobID = `jobid-${uuidv4()}`;
+            const taskId = `taskid-${uuidv4()}`;
+            it('should set results', async () => {
+                const pipeline = {
+                    "name": "algo6",
+                    "nodes": [
+                        {
+                            "nodeName": "string",
+                            "algorithmName": "string",
+                            "input": [
+                                "string"
+                            ]
+                        }
+                    ],
+                    "flowInput": {},
+                    "webhook": {
+                        "progressHook": "string",
+                        "resultHook": "string"
+                    }
+                }
+                const etcdSet = await etcd.execution.setExecution({ jobId: jobID, data: pipeline });
+                const etcdGet = await etcd.execution.getExecution({ jobId: jobID });
+                expect(pipeline).to.have.deep.keys(etcdGet);
+            });
+        });
+        describe('watch', () => {
+            it('should onResult', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await etcd.tasks.onResult({ jobId, taskId }, (result) => {
+                    expect(result).to.have.deep.keys(data)
+                });
+                etcd.tasks.setResult(data);
+            });
+            it('should onStatus', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await etcd.tasks.onStatus({ jobId, taskId }, (result) => {
+                    expect(result).to.have.deep.keys(data)
+                });
+                etcd.tasks.setStatus(data);
+            });
+        });
+    });
     describe('pipelines', () => {
         describe('sets', () => {
             it('should set results', async () => {
@@ -277,7 +325,7 @@ describe('etcd test init with instanceId ', () => {
             });
             it('should get all pipelines', async () => {
                 const pipelines = await etcd.pipelines.getPipelines();
-                expect(pipelines).to.have.deep.keys(pipelines);
+                expect(pipelines).to.be.an('array');
             });
         });
         describe('watch', () => {
