@@ -229,6 +229,9 @@ describe('etcd test init with instanceId ', () => {
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, result: data.result });
                 const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
+                const watch = await etcd.tasks.onStateChange({ jobId: jobID, taskId }, (res) => {
+                    watch.stop();
+                });
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('should set status', async () => {
@@ -249,8 +252,9 @@ describe('etcd test init with instanceId ', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                await etcd.tasks.onStateChange({ jobId, taskId }, (res) => {
-                    expect(data).to.have.deep.keys(res)
+                const watch = await etcd.tasks.onStateChange({ jobId, taskId }, (res) => {
+                    expect(data).to.have.deep.keys(res);
+                    watch.stop();
                 });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
             });
