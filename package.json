@@ -1,5 +1,5 @@
 {
-  "name": "etcd.rf",
+  "name": "etcd.hkube",
   "version": "2.1.30",
   "description": "",
   "main": "../lib/discovery/etcdDiscovery",
