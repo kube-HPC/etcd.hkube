@@ -1,6 +1,6 @@
 {
   "name": "etcd.hkube",
-  "version": "2.1.36",
+  "version": "2.1.37",
   "description": "",
   "main": "../lib/discovery/etcdDiscovery",
   "scripts": {
