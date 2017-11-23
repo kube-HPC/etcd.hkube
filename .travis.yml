@@ -24,7 +24,6 @@ install:
 cache:
   directories:
   - node_modules
-  - "$HOME/google-cloud-sdk/"
 script:
 - NODE_ENV=test npm run-script test-travis
 # Send coverage data to Coveralls
