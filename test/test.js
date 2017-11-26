@@ -8,7 +8,7 @@ const path = require('path');
 let etcd = new Etcd();
 const SERVICE_NAME = 'my-test-service';
 
-xdescribe('etcd-tests', () => {
+describe('etcd-tests', () => {
     beforeEach(async () => {
         etcd = new Etcd();
         await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
@@ -258,17 +258,6 @@ describe('etcd test init with instanceId ', () => {
             });
         });
         describe('watch', () => {
-            it('should watch key two times', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const taskId = `taskid-${uuidv4()}`;
-                const data = { result: { bla: 'bla' }, status: 'complete' };
-                const watch = await etcd.tasks.watch({ jobId, taskId });
-                var badFn = () => {
-                    etcd.tasks.watch({ jobId, taskId });
-                };
-                expect(badFn).to.throw(Error);
-
-            });
             it('should watch key', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
@@ -279,6 +268,24 @@ describe('etcd test init with instanceId ', () => {
                     await etcd.tasks.unwatch({ jobId, taskId });
                 });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+            });
+            it('should return the set obj on watch', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { result: { bla: 'bla' }, status: 'complete' };
+                const etcdSet = await etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                const watch = await etcd.tasks.watch({ jobId, taskId });
+                expect(data).to.have.deep.keys(watch);
+            });
+            it('should throw error if watch already exists', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const watch = await etcd.tasks.watch({ jobId, taskId });
+                try {
+                    await etcd.tasks.watch({ jobId, taskId });
+                } catch (error) {
+                    expect(error.message).to.equals(`already watching ${JSON.stringify({ jobId, taskId })}`);
+                }
             });
         });
         describe('unwatch', () => {
@@ -335,6 +342,16 @@ describe('etcd test init with instanceId ', () => {
             it('should get all pipelines', async () => {
                 const pipelines = await etcd.pipelines.getPipelines();
                 expect(pipelines).to.be.an('array');
+            });
+        });
+        describe('delete', () => {
+            it('should delete pipeline', async () => {
+                const name = `pipeline-delete`;
+                const data = { bla: 'bla' };
+                const etcdSet = await etcd.pipelines.setPipeline({ name, data });
+                const etcdDelete = await etcd.pipelines.deletePipeline({ name });
+                const etcdGet = await etcd.pipelines.getPipeline({ name });
+                expect(etcdGet).to.be.null;
             });
         });
         describe('watch', () => {
