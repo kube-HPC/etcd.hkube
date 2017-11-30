@@ -1,6 +1,6 @@
 {
   "name": "@hkube/etcd",
-  "version": "2.1.47",
+  "version": "2.1.48",
   "description": "etcd infrastructure build for the hkube project",
   "main": "index.js",
   "scripts": {
