@@ -65,6 +65,8 @@ class EtcdClient extends EventEmitter {
         }
     }
 
+
+    
     /**
      * init data for starting
      * @param {object} options 
