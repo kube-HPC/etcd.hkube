@@ -1,1 +1,1 @@
-module.exports = require('./lib/discovery/etcdDiscovery');
+module.exports = require('./etcd-client');

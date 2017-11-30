@@ -275,8 +275,9 @@ describe('etcd test init with instanceId ', () => {
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const watch = await etcd.tasks.watch({ jobId });
                 etcd.tasks.on('change', async (res) => {
-                    expect(data).to.have.deep.keys(res);
-                    await etcd.tasks.unwatch({ jobId, taskId });
+                    const obj = Object.assign({}, data, { jobId: jobId, taskId });
+                    expect(obj).to.have.deep.keys(res);
+                    await etcd.tasks.unwatch({ jobId });
                 });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
             });

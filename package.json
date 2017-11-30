@@ -1,8 +1,8 @@
 {
   "name": "@hkube/etcd",
   "version": "2.1.47",
-  "description": "",
-  "main": "../lib/discovery/etcdDiscovery",
+  "description": "etcd infrastructure build for the hkube project",
+  "main": "index.js",
   "scripts": {
     "test": "mocha test --colors --recursive",
     "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec test",
@@ -11,21 +11,16 @@
   "author": "maty zisserman",
   "license": "ISC",
   "dependencies": {
-    "await-done": "^1.0.2",
-    "bluebird": "^3.5.0",
-    "chai": "^4.1.2",
     "djsv": "^3.0.3",
-    "install": "^0.10.1",
-    "lodash": "^4.17.4",
-    "mocha": "^4.0.0",
     "node-etcd": "^5.1.0",
     "uuid": "^3.1.0"
   },
   "devDependencies": {
     "await-delay": "^1.0.0",
-    "eslint": "^4.7.2",
+    "await-done": "^1.0.2",
     "chai": "^4.1.2",
     "coveralls": "^3.0.0",
+    "eslint": "^4.12.1",
     "istanbul": "^1.1.0-alpha.1",
     "mocha": "^4.0.0",
     "sinon": "^4.0.0"

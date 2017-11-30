@@ -1,20 +1,20 @@
 const Etcd = require('node-etcd');
 const EventEmitter = require('events');
 const djsv = require('djsv');
-const discovery = require('./discovery');
-const services = require('../services/services');
-const jobs = require('../jobs/jobs');
-const jobResults = require('../jobResults/jobResults');
-const tasks = require('../tasks/tasks');
-const pipelines = require('../pipelines/pipelines');
-const execution = require('../execution/execution');
-const { registerSchema, watchSchema, initSchema, getSchema, setSchema, updateInitSchema } = require('../schema');
+const discovery = require('./lib/discovery/discovery');
+const services = require('./lib/services/services');
+const jobs = require('./lib/jobs/jobs');
+const jobResults = require('./lib/jobResults/jobResults');
+const tasks = require('./lib/tasks/tasks');
+const pipelines = require('./lib/pipelines/pipelines');
+const execution = require('./lib/execution/execution');
+const { registerSchema, watchSchema, initSchema, getSchema, setSchema, updateInitSchema } = require('./lib/schema');
 
-class EtcdDiscovery extends EventEmitter {
+class EtcdClient extends EventEmitter {
 
     constructor() {
         super();
-        this.instanceId = ''
+        this.instanceId = '';
         this.registerSchema = djsv(registerSchema);
         this.watchSchema = djsv(watchSchema);
         this.initSchema = djsv(initSchema);
@@ -112,15 +112,6 @@ class EtcdDiscovery extends EventEmitter {
         }
         return parsed
     }
-
-    _schemaError(error) {
-        let parsed = json;
-        try {
-            parsed = JSON.parse(json);
-        } catch (e) {
-        }
-        return parsed
-    }
 }
 
-module.exports = EtcdDiscovery;
+module.exports = EtcdClient;
