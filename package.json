@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "await-delay": "^1.0.0",
-    "await-done": "^1.0.2",
+    "await-done": "^1.0.4",
     "chai": "^4.1.2",
     "coveralls": "^3.0.0",
     "eslint": "^4.12.1",
