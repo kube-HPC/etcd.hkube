@@ -232,7 +232,7 @@ describe('etcd test init with instanceId ', () => {
     });
     describe('jobResults', () => {
         describe('sets', () => {
-            it('should set results', async () => {
+            it('jobs:should set results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 let etcdSet = await etcd.jobResults.setResults({ data: data, jobId: jobId });
@@ -240,7 +240,7 @@ describe('etcd test init with instanceId ', () => {
                 expect(etcdSet.node.key).to.equal(`/jobResults/${jobId}/result`);
                 expect(etcdGet).to.have.deep.keys(data)
             });
-            it('should get results by status', async () => {
+            it('jobs:should get results by status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
                 const jobId2 = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
@@ -254,7 +254,7 @@ describe('etcd test init with instanceId ', () => {
                 expect(etcdGet[0].status).to.equal(status);
 
             });
-            it('should set status', async () => {
+            it('jobs:should set status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { status: 'completed' };
                 let etcdSet = await etcd.jobResults.setStatus({ data: data, jobId: jobId });
@@ -289,21 +289,21 @@ describe('etcd test init with instanceId ', () => {
     describe('tasks', () => {
         describe('sets', () => {
             const jobID = `jobid-${uuidv4()}`;
-            it('should set results', async () => {
+            it('task: should set results', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, result: data.result });
                 const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
-            it('should set status', async () => {
+            it('task: should set status', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
                 let etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
                 let etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
-            it('should get jobs tasks', async () => {
+            it('task: should get jobs tasks', async () => {
                 const list = await etcd.tasks.list({ jobId: jobID });
                 const task = list.values().next();
                 expect(task.value).to.have.property('status');
