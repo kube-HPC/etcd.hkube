@@ -4,12 +4,15 @@ class etcdClient {
     constructor(options) {
         this.client = new Etcd3(options)
     }
-    async get(path, { isPrefix = true }) {
+    async get(path, { isPrefix = true } = {}) {
+        let res = null
         if (isPrefix) {
-            let bla = await this.client.getAll().prefix(path)
+            let res = await this.client.getAll().prefix(path)
+            return res
         } else {
             let res = await this.client.get(path);
             return JSON.parse(res)
+
         }
     }
 

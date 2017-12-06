@@ -51,7 +51,7 @@ class EtcdClient extends EventEmitter {
             this._etcdConfigPath = `${options.etcd.protocol}://${options.etcd.host}:${options.etcd.port}`;
             //this.etcd3 = new Etcd3({ hosts: this._etcdConfigPath })
             this.etcd3 = new etcd3Client({ hosts: this._etcdConfigPath });
-            this.etcd = new Etcd(this._etcdConfigPath);
+            //    this.etcd = new Etcd(this._etcdConfigPath);
             this._serviceName = options.serviceName;
             this._instanceId = options.instanceId;
             this.jobId = options.jobId;
