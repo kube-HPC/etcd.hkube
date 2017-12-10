@@ -16,14 +16,14 @@ class etcdClient {
         }
     }
 
-    async getAndWatch(path) {
-        let data = await this.client.getAll().prefix(path);
+    async getAndWatch(path, options) {
+        let data = await this.get(path, options);
         let watcher = await this.client.watch().prefix(path).create();
         return { data, watcher }
     }
 
     async delete(path) {
-        return await this.client().delete().prefix(path);
+        return await this.client.delete().prefix(path);
     }
 
     async watch(path) {
