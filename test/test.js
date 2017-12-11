@@ -146,7 +146,18 @@ describe('etcd-tests', () => {
             let etcdSet = await etcd.services.set({ data, instanceId })
             let etcdGet = await etcd.services.get({ instanceId, prefix: 'services' })
             expect(etcdGet.data).to.have.deep.keys(data.data)
-        }).timeout(10000);
+        }).timeout(1000);
+        it('etcd sort with limit', async () => {
+            let instanceId = `'etcd-set-get-test-${uuidv4()}`
+            for (let i = 0; i < 10; i++) {
+                let a = await etcd.etcd3.put(`${instanceId}/${i}`, { val: `val${i}` }, null)
+                await delay(100);
+            }
+            await delay(200);
+            let data = await etcd.etcd3.getSortLimit(`${instanceId}`, ["Mod", "Ascend"], 6);
+            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal(`val0`)
+            expect(Object.keys(data).length).to.equal(6)
+        });
     });
 })
 
