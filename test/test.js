@@ -314,6 +314,10 @@ describe('etcd test init with instanceId ', () => {
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('task: should get jobs tasks', async () => {
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { status: 'failed', error: 'stam error' };
+                await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
+                await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
                 const list = await etcd.tasks.list({ jobId: jobID });
                 const task = list.values().next();
                 expect(task.value).to.have.property('status');
