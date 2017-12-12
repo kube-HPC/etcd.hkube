@@ -341,7 +341,7 @@ describe('etcd test init with instanceId ', () => {
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const watch = await etcd.tasks.watch({ jobId, taskId });
                 etcd.tasks.on('change', async (res) => {
-                    expect(data).to.have.deep.keys(res);
+                    expect({ jobId, ...data }).to.have.deep.keys(res);
                     await etcd.tasks.unwatch({ jobId, taskId });
                 });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
@@ -352,7 +352,7 @@ describe('etcd test init with instanceId ', () => {
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const watch = await etcd.tasks.watch({ jobId });
                 etcd.tasks.on('change', async (res) => {
-                    const obj = Object.assign({}, data, { jobId: jobId, taskId });
+                    const obj = { ...data, jobId, taskId };
                     expect(obj).to.have.deep.keys(res);
                     await etcd.tasks.unwatch({ jobId });
                 });
@@ -458,7 +458,7 @@ describe('etcd test init with instanceId ', () => {
                 const data = { bla: 'bla' };
                 await etcd.pipelines.watch()
                 etcd.pipelines.on('change', (res) => {
-                    expect({ name, data }).to.have.deep.keys(data)
+                    expect({ name, data }).to.have.deep.keys(res)
                 });
                 etcd.pipelines.setPipeline({ name, data });
             });
