@@ -171,6 +171,7 @@ describe('etcd test init with instanceId ', () => {
         jobId = `jobid-${uuidv4()}`;
         taskId = `taskid-${uuidv4()}`;
         await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME, instanceId, jobId, taskId });
+        _semaphore = new semaphore();
     });
     describe('services', () => {
         it('should get instance id without specific instanceId as a set param', async () => {
@@ -284,26 +285,33 @@ describe('etcd test init with instanceId ', () => {
                 expect(etcdGet).to.have.deep.keys(data);
             });
         });
-        describe('watch', () => {
-            it('should watch results', async () => {
+        describe('jobs:watch', () => {
+            it('jobs:should watch results', async () => {
+
                 const data = { bla: 'bla' };
                 const jobId = `jobid-${uuidv4()}`;
                 await etcd.jobResults.watch({ jobId });
-                etcd.jobResults.on('change', (res) => {
+                etcd.jobResults.on('result-change', (res) => {
                     expect(res.jobId).to.equal(jobId);
-                    expect(res.data).to.have.deep.keys(data);
+                    expect(res.bla).to.equal(data.bla);
+                    etcd.jobResults.unwatch();
+                    _semaphore.callDone();
+
                 });
                 etcd.jobResults.setResults({ data, jobId });
+                await _semaphore.done();
             });
-            it('should watch status', async () => {
+            it('jobs:should watch status', async () => {
                 const data = { status: 'completed' };
                 const jobId = `jobid-${uuidv4()}`;
                 await etcd.jobResults.watch({ jobId });
-                etcd.jobResults.on('change', (res) => {
+                etcd.jobResults.on('status-change', (res) => {
                     expect(res.jobId).to.equal(jobId);
-                    expect(res.data).to.have.deep.keys(data);
+                    expect(res.status).to.equal(data.status);
+                    _semaphore.callDone();
                 });
                 etcd.jobResults.setStatus({ data, jobId });
+                await _semaphore.done();
             });
         });
     });
@@ -341,10 +349,12 @@ describe('etcd test init with instanceId ', () => {
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const watch = await etcd.tasks.watch({ jobId, taskId });
                 etcd.tasks.on('change', async (res) => {
-                    expect({ jobId, ...data }).to.have.deep.keys(res);
+                    expect({ jobId, ...data, taskId }).to.have.deep.keys(res);
                     await etcd.tasks.unwatch({ jobId, taskId });
+                    _semaphore.callDone();
                 });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                await _semaphore.done();
             });
             it('should watch all keys', async () => {
                 const jobId = `jobid-${uuidv4()}`;
@@ -354,9 +364,11 @@ describe('etcd test init with instanceId ', () => {
                 etcd.tasks.on('change', async (res) => {
                     const obj = { ...data, jobId, taskId };
                     expect(obj).to.have.deep.keys(res);
-                    await etcd.tasks.unwatch({ jobId });
+                    etcd.tasks.unwatch();
+                    _semaphore.callDone();
                 });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                await _semaphore.done();
             });
             it('should return the set obj on watch', async () => {
                 const jobId = `jobid-${uuidv4()}`;
@@ -449,9 +461,14 @@ describe('etcd test init with instanceId ', () => {
                 const data = { bla: 'bla' };
                 await etcd.pipelines.watch({ name });
                 etcd.pipelines.on('change', (res) => {
+                    console.log(res);
                     expect({ name, data }).to.have.deep.keys(res)
+                    etcd.pipelines.unwatch();
+                    _semaphore.callDone();
+
                 });
-                etcd.pipelines.setPipeline({ name, data });
+                await etcd.pipelines.setPipeline({ name, data });
+                await _semaphore.done();
             });
             it('should watch all pipelines', async () => {
                 const name = `pipeline-3`;
@@ -459,8 +476,11 @@ describe('etcd test init with instanceId ', () => {
                 await etcd.pipelines.watch()
                 etcd.pipelines.on('change', (res) => {
                     expect({ name, data }).to.have.deep.keys(res)
+                    etcd.pipelines.unwatch();
+                    _semaphore.callDone()
                 });
-                etcd.pipelines.setPipeline({ name, data });
+                await etcd.pipelines.setPipeline({ name, data });
+                await _semaphore.done();
             });
         });
     });

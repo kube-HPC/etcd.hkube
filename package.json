@@ -14,11 +14,12 @@
     "djsv": "^3.0.3",
     "etcd3": "^0.2.6",
     "node-etcd": "^5.1.0",
+    "update": "^0.7.4",
     "uuid": "^3.1.0"
   },
   "devDependencies": {
     "await-delay": "^1.0.0",
-    "await-done": "^1.0.4",
+    "await-done": "^1.0.10",
     "chai": "^4.1.2",
     "coveralls": "^3.0.0",
     "eslint": "^4.12.1",
