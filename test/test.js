@@ -208,7 +208,7 @@ describe('etcd test init with instanceId ', () => {
             let etcdGet = await pipelineDriver.getDriverTasks({ taskId });
             expect(etcdGet[Object.keys(etcdGet)[0]]).to.have.deep.keys({ taskId, ...data });
         });
-        xit('should delete state', async () => {
+        it('should delete state', async () => {
             let { pipelineDriver } = etcd.services;
             const jobId = `jobid-${uuidv4()}`;
             let taskId = `taskid-${uuidv4()}`;
