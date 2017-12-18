@@ -22,8 +22,13 @@ class etcdClient {
         return { data, watcher }
     }
 
-    async delete(path) {
-        return await this.client.delete().prefix(path);
+    async delete(path, { isPrefix = false } = {}) {
+        if (isPrefix) {
+            return await this.client.delete().prefix(path);
+        }
+        else {
+            return await this.client.delete().key(path);
+        }
     }
 
     async watch(path) {

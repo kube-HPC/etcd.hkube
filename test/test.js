@@ -216,7 +216,7 @@ describe('etcd test init with instanceId ', () => {
             let etcdSet = await pipelineDriver.setState({ jobId, taskId });
             let etcdDelete = await pipelineDriver.deleteState({ jobId });
             let etcdGet = await pipelineDriver.getState({ jobId });
-            expect(etcdGet).to.equal(null);
+            expect(etcdGet).to.be.empty;
         });
     });
     describe('jobs', () => {
@@ -442,7 +442,7 @@ describe('etcd test init with instanceId ', () => {
             });
             it('pipeline:should get all pipelines', async () => {
                 const pipelines = await etcd.pipelines.getPipelines();
-                expect(pipelines).to.be.an('array');
+                expect(pipelines[0]).to.have.deep.keys({ bla: 'bla' });
             });
         });
         describe('delete', () => {
