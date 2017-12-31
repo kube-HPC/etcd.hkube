@@ -170,7 +170,7 @@ describe('etcd test init with instanceId ', () => {
         instanceId = `etcd-set-get-test-${uuidv4()}`;
         jobId = `jobid-${uuidv4()}`;
         taskId = `taskid-${uuidv4()}`;
-        await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME, instanceId, jobId, taskId });
+        await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
         _semaphore = new semaphore();
     });
     describe('services', () => {
@@ -192,10 +192,11 @@ describe('etcd test init with instanceId ', () => {
     describe('pipeline driver api', () => {
         it('should set and get tasks', async () => {
             let { pipelineDriver } = etcd.services;
+            const jobId = `jobid-${uuidv4()}`;
             let taskId = `taskid-${uuidv4()}`;
             let data = { bla: 'bla' };
-            let etcdSet = await pipelineDriver.setTaskState({ taskId, data });
-            let etcdGet = await pipelineDriver.getTaskState({ taskId });
+            let etcdSet = await pipelineDriver.setTaskState({ jobId, taskId, data });
+            let etcdGet = await pipelineDriver.getTaskState({ jobId, taskId });
             expect(etcdGet).to.have.deep.keys(data);
         });
 
