@@ -67,8 +67,6 @@ class EtcdClient extends EventEmitter {
         }
     }
 
-
-
     /**
      * init data for starting
      * @param {object} options 
@@ -95,9 +93,6 @@ class EtcdClient extends EventEmitter {
             this.jobId = options.jobId;
         }
     }
-
-
-
 
     _tryParseJSON(json) {
         let parsed = json;

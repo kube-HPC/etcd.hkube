@@ -174,17 +174,17 @@ describe('etcd test init with instanceId ', () => {
         _semaphore = new semaphore();
     });
     describe('services', () => {
-        it('should get instance id without specific instanceId as a set param', async () => {
+        it('should get without specific instanceId', async () => {
             let data = { data: { bla: 'bla' } }
             let etcdSet = await etcd.services.set(data)
-            let etcdGet = await etcd.services.get({ instanceId, prefix: 'services' })
+            let etcdGet = await etcd.services.get({ prefix: 'services' })
             expect(etcdGet).to.have.deep.keys(data.data)
         }).timeout(10000);
-        it('should able to send suffix', async () => {
+        it('should get without specific instanceId with suffix', async () => {
             let suffix = 'test'
             let data = { data: { bla: 'bla' } };
             let etcdSet = await etcd.services.set({ data, suffix })
-            let etcdGet = await etcd.services.get({ instanceId, prefix: 'services', suffix })
+            let etcdGet = await etcd.services.get({ prefix: 'services', suffix })
             expect(etcdGet.data).to.have.deep.keys(data.data)
         }).timeout(10000);
 
