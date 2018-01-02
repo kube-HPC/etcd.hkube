@@ -1,4 +1,6 @@
 const Etcd = require('node-etcd');
+const { Etcd3 } = require('etcd3');
+const etcd3Client = require('./etcd3-client')
 const EventEmitter = require('events');
 const djsv = require('djsv');
 const discovery = require('./lib/discovery/discovery');
@@ -47,7 +49,7 @@ class EtcdClient extends EventEmitter {
         let initSchemaConfig = this.initSchema(options);
         if (initSchemaConfig.valid) {
             this._etcdConfigPath = `${options.etcd.protocol}://${options.etcd.host}:${options.etcd.port}`;
-            this.etcd = new Etcd(this._etcdConfigPath);
+            this.etcd3 = new etcd3Client({ hosts: this._etcdConfigPath });
             this._serviceName = options.serviceName;
             this._instanceId = options.instanceId;
             this.jobId = options.jobId;
@@ -90,18 +92,6 @@ class EtcdClient extends EventEmitter {
             this.taskId = options.taskId;
             this.jobId = options.jobId;
         }
-    }
-
-    async _keyRegister(etcdPath, ttl, data) {
-        return new Promise((resolve, reject) => {
-            this.etcd.set(etcdPath,
-                JSON.stringify(data), { ttl }, (err, res) => {
-                    if (err) {
-                        return reject(err);
-                    }
-                    return resolve(res);
-                })
-        });
     }
 
     _tryParseJSON(json) {
