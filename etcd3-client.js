@@ -50,10 +50,12 @@ class etcdClient {
         return await this.client.put(path).value(JSON.stringify(value));
     }
 
+    //sort(target: "Key" | "Version" | "Create" | "Mod" | "Value", order: "None" | "Ascend" | "Descend"):
     async getSortLimit(path, sort = ["Mod", "Ascend"], limit = 100) {
         return await this.client.getAll()
             .prefix(path)
-            .limit(8).sort(...sort).limit(limit);
+            .sort(...sort)
+            .limit(limit);
     }
 }
 
