@@ -273,7 +273,7 @@ describe('etcd test init with instanceId ', () => {
         describe('sets', () => {
             it('should set and get results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { execution_id: jobId, bla: 'bla' };
+                const data = { jobId, bla: 'bla' };
                 let etcdSet = await etcd.jobResults.setResults({ data: data, jobId });
                 let etcdGet = await etcd.jobResults.getResult({ jobId });
                 expect(etcdGet).to.have.deep.keys(data)
@@ -293,7 +293,7 @@ describe('etcd test init with instanceId ', () => {
             });
             it('should set and get status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { execution_id: jobId, status: 'completed' };
+                const data = { jobId, status: 'completed' };
                 let etcdSet = await etcd.jobResults.setStatus({ data: data, jobId: jobId });
                 let etcdGet = await etcd.jobResults.getStatus({ jobId: jobId });
                 expect(etcdGet).to.deep.equal(data);
@@ -302,7 +302,7 @@ describe('etcd test init with instanceId ', () => {
         describe('watch', () => {
             it('should watch results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { execution_id: jobId, bla: 'bla' };
+                const data = { jobId, bla: 'bla' };
                 await etcd.jobResults.watch({ jobId });
                 etcd.jobResults.on('result-change', (res) => {
                     expect(res).to.deep.equal(data);
@@ -313,7 +313,7 @@ describe('etcd test init with instanceId ', () => {
             });
             it('should watch status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { execution_id: jobId, status: 'completed' };
+                const data = { jobId, status: 'completed' };
                 await etcd.jobResults.watch({ jobId });
                 etcd.jobResults.on('status-change', (res) => {
                     expect(res).to.deep.equal(data);
