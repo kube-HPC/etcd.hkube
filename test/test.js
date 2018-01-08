@@ -508,4 +508,22 @@ describe('etcd test init with instanceId ', () => {
             });
         });
     });
+    describe('algorithm-queue', () => {
+        it('get', async () => {
+            const queueName = `algorithm-x-${uuidv4()}`;
+            const queue = { bla: 'bla' };
+            const etcdSet = await etcd.algorithmQueue.store({ queueName,queue });
+            const etcdGet = await etcd.algorithmQueue.get({ queueName });
+            expect(etcdGet).to.have.deep.keys(queue);
+        });
+        it('store', async () => {
+            const queueName = `algorithm-x-${uuidv4()}`;
+            const queue = { bla: 'bla' };
+            const etcdSet = await etcd.algorithmQueue.store({ queueName,queue });
+            const etcdGet = await etcd.algorithmQueue.get({ queueName });
+            expect(etcdGet).to.have.deep.keys(queue);
+      
+
+        });
+    });
 })

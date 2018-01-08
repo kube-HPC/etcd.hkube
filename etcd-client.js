@@ -10,6 +10,8 @@ const jobResults = require('./lib/jobResults/jobResults');
 const tasks = require('./lib/tasks/tasks');
 const pipelines = require('./lib/pipelines/pipelines');
 const execution = require('./lib/execution/execution');
+const algorithmQueue = require('./lib/algorithm-queue/algorithm-queue');
+
 const { registerSchema, watchSchema, initSchema, getSchema, setSchema, updateInitSchema } = require('./lib/schema');
 
 class EtcdClient extends EventEmitter {
@@ -29,6 +31,7 @@ class EtcdClient extends EventEmitter {
         this.tasks = new tasks();
         this.pipelines = new pipelines();
         this.execution = new execution();
+        this.algorithmQueue = new algorithmQueue();
     }
 
     /**
@@ -61,6 +64,7 @@ class EtcdClient extends EventEmitter {
             this.tasks.init(this);
             this.pipelines.init(this);
             this.execution.init(this);
+            this.algorithmQueue.init(this);
             return this;
         } else {
             throw new Error(initSchemaConfig.error)
