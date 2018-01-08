@@ -11,6 +11,7 @@ let etcd = new Etcd();
 const SERVICE_NAME = 'my-test-service';
 let etcd3 = null;
 let _semaphore = null;
+
 describe('etcd-tests', () => {
     beforeEach(async () => {
         etcd = new Etcd();
@@ -231,7 +232,7 @@ describe('etcd test init with instanceId ', () => {
             });
         });
         describe('watch', () => {
-            it('should watch stateChanged', async () => {
+            it('should watch state changed', async () => {
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
                 await etcd.jobs.watch({ jobId });
@@ -240,7 +241,7 @@ describe('etcd test init with instanceId ', () => {
                 });
                 etcd.jobs.setState({ state, jobId });
             });
-            it('should unwatch stateChanged', async () => {
+            it('should watch stop state', async () => {
                 const state = 'stop';
                 const reason = 'jobs must be cancelled';
                 const jobId = `jobid-${uuidv4()}`;
@@ -252,18 +253,32 @@ describe('etcd test init with instanceId ', () => {
                 etcd.jobs.stop({ reason, jobId });
             });
         });
+        describe('unwatch', () => {
+            it('should watch stateChanged', async () => {
+                let isCalled = false;
+                const state = 'started';
+                const jobId = `jobid-${uuidv4()}`;
+                await etcd.jobs.watch({ jobId });
+                etcd.jobs.on('change', (res) => {
+                    isCalled = true;
+                });
+                await etcd.jobs.unwatch({ jobId });
+                etcd.jobs.setState({ state, jobId });
+                await delay(1000);
+                expect(isCalled).to.equal(false);
+            });
+        });
     });
     describe('jobResults', () => {
         describe('sets', () => {
-            it('jobs:should set results', async () => {
+            it('should set and get results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                let etcdSet = await etcd.jobResults.setResults({ data: data, jobId: jobId });
-                let etcdGet = await etcd.jobResults.getResult({ jobId: jobId });
-                //  expect(etcdSet.node.key).to.equal(`/jobResults/${jobId}/result`);
+                const data = { execution_id: jobId, bla: 'bla' };
+                let etcdSet = await etcd.jobResults.setResults({ data: data, jobId });
+                let etcdGet = await etcd.jobResults.getResult({ jobId });
                 expect(etcdGet).to.have.deep.keys(data)
             });
-            it('jobs:should get results by status', async () => {
+            it('should get results by status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
                 const jobId2 = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
@@ -272,68 +287,76 @@ describe('etcd test init with instanceId ', () => {
                 await etcd.jobResults.setResults({ data: data, jobId: jobId2 });
                 await etcd.jobResults.setStatus({ data: 'failed', jobId: jobId1 });
                 await etcd.jobResults.setStatus({ data: 'completed', jobId: jobId2 });
-
                 let etcdGet = await etcd.jobResults.getResultsByStatus({ status: status });
                 expect(etcdGet[0].status).to.equal(status);
 
             });
-            it('jobs:should set status', async () => {
+            it('should set and get status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { status: 'completed' };
+                const data = { execution_id: jobId, status: 'completed' };
                 let etcdSet = await etcd.jobResults.setStatus({ data: data, jobId: jobId });
                 let etcdGet = await etcd.jobResults.getStatus({ jobId: jobId });
-                // expect(etcdSet.node.key).to.equal(`/jobResults/${jobId}/status`);
-                expect(etcdGet).to.have.deep.keys(data);
+                expect(etcdGet).to.deep.equal(data);
             });
         });
-        describe('jobs:watch', () => {
-            it('jobs:should watch results', async () => {
-
-                const data = { bla: 'bla' };
+        describe('watch', () => {
+            it('should watch results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
+                const data = { execution_id: jobId, bla: 'bla' };
                 await etcd.jobResults.watch({ jobId });
                 etcd.jobResults.on('result-change', (res) => {
-                    expect(res.jobId).to.equal(jobId);
-                    expect(res.bla).to.equal(data.bla);
-                    etcd.jobResults.unwatch();
+                    expect(res).to.deep.equal(data);
                     _semaphore.callDone();
-
                 });
                 etcd.jobResults.setResults({ data, jobId });
                 await _semaphore.done();
             });
-            it('jobs:should watch status', async () => {
-                const data = { status: 'completed' };
+            it('should watch status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
+                const data = { execution_id: jobId, status: 'completed' };
                 await etcd.jobResults.watch({ jobId });
                 etcd.jobResults.on('status-change', (res) => {
-                    expect(res.jobId).to.equal(jobId);
-                    expect(res.status).to.equal(data.status);
+                    expect(res).to.deep.equal(data);
                     _semaphore.callDone();
                 });
                 etcd.jobResults.setStatus({ data, jobId });
                 await _semaphore.done();
             });
         });
+        describe('unwatch', () => {
+            it('should unwatch stateChanged', async () => {
+                let isCalled = false;
+                const state = 'started';
+                const jobId = `jobid-${uuidv4()}`;
+                await etcd.jobResults.watch({ jobId });
+                etcd.jobResults.on('status-change', (res) => {
+                    isCalled = true;
+                });
+                await etcd.jobResults.unwatch({ jobId });
+                etcd.jobResults.setStatus({ state, jobId });
+                await delay(1000);
+                expect(isCalled).to.equal(false);
+            });
+        });
     });
     describe('tasks', () => {
         describe('sets', () => {
             const jobID = `jobid-${uuidv4()}`;
-            it('task: should set results', async () => {
+            it('should set results', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
                 const etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, result: data.result });
                 const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
-            it('task: should set status', async () => {
+            it('should set status', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
                 let etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
                 let etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
-            it('task: should get jobs tasks', async () => {
+            it('should get jobs tasks', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
                 await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
@@ -399,7 +422,7 @@ describe('etcd test init with instanceId ', () => {
                 etcd.tasks.on('change', (res) => {
                     expect(data).to.have.deep.keys(res);
                 });
-                const res = await etcd.tasks.unwatch({ jobId, taskId });
+                await etcd.tasks.unwatch({ jobId, taskId });
                 etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
             });
         });
@@ -434,14 +457,14 @@ describe('etcd test init with instanceId ', () => {
     });
     describe('pipelines', () => {
         describe('sets', () => {
-            it('pipeline:should set results', async () => {
+            it('should set results', async () => {
                 const name = `pipeline-1`;
                 const data = { bla: 'bla' };
                 const etcdSet = await etcd.pipelines.setPipeline({ name, data });
                 const etcdGet = await etcd.pipelines.getPipeline({ name });
                 expect(etcdGet).to.have.deep.keys(data);
             });
-            it('pipeline:should get all pipelines', async () => {
+            it('should get all pipelines', async () => {
                 const pipelines = await etcd.pipelines.getPipelines();
                 expect(pipelines[0]).to.have.deep.keys({ bla: 'bla' });
             });
