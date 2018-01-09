@@ -1,224 +1,204 @@
 
 const { expect } = require('chai');
 const Etcd = require('../index');
-const { done, callDone, semaphore } = require('await-done');
+const Semaphore = require('await-done').semaphore;
 const sinon = require('sinon');
 const delay = require('await-delay');
 const uuidv4 = require('uuid/v4');
-const path = require('path');
-const Etcd3 = require('../etcd3-client');
 let etcd = new Etcd();
 const SERVICE_NAME = 'my-test-service';
-let etcd3 = null;
 let _semaphore = null;
 
-describe('etcd-tests', () => {
+describe('etcd', () => {
     beforeEach(async () => {
         etcd = new Etcd();
-        //  etcd3 = new Etcd3({ hosts: `http://localhost:4001` })
         await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-        console.log('creating new semaphore');
-        _semaphore = new semaphore();
-    })
-
+        _semaphore = new Semaphore();
+    });
     describe('etcd-discovery', () => {
         it('should register key and update ttl according to interval', async () => {
-            let instanceId = `register-test-${uuidv4()}`
+            const instanceId = `register-test-${uuidv4()}`;
             try {
-                let putEvent = sinon.spy();
-                let changeEvent = sinon.spy();
-                let deleteEvent = sinon.spy();
-                let expireEvent = sinon.spy();
-                let watch = await etcd.discovery.watch({ instanceId });
-                expect(watch).to.have.property('watcher')
+                const putEvent = sinon.spy();
+                const changeEvent = sinon.spy();
+                const deleteEvent = sinon.spy();
+                const expireEvent = sinon.spy();
+                const watch = await etcd.discovery.watch({ instanceId });
+                expect(watch).to.have.property('watcher');
                 //   expect(watch).to.have.property('obj');
                 expect(watch.data).to.be.empty;
-                watch.watcher.on('disconnected', () => console.log('disconnected...'))
-                watch.watcher.on('connected', () => console.log('successfully reconnected!'))
-                watch.watcher.on('put', res => {
-                    console.log('testLease:', res.value.toString())
+                watch.watcher.on('disconnected', () => console.log('disconnected...'));
+                watch.watcher.on('connected', () => console.log('successfully reconnected!'));
+                watch.watcher.on('put', (res) => {
+                    console.log('testLease:', res.value.toString());
                     putEvent();
-                })
-                watch.watcher.on('delete', res => {
-                    console.log('testdeleteLease:', res.value.toString())
+                });
+                watch.watcher.on('delete', (res) => {
+                    console.log('testdeleteLease:', res.value.toString());
                     deleteEvent();
-                })
-                watch.watcher.on('data', res => {
+                });
+                watch.watcher.on('data', () => {
                     changeEvent();
-                    console.log('testdaraLease:')
+                    console.log('testdaraLease:');
                     _semaphore.callDone();
-                })
-                await etcd.discovery.register({ ttl: 10, interval: 1000, instanceId, data: { bla: 'bla' } });
-
-
+                });
+                await etcd.discovery.register({
+                    ttl: 10, instanceId, data: { bla: 'bla' }
+                });
                 await _semaphore.done({ doneAmount: 1 });
-                watch.watcher.removeAllListeners()
+                watch.watcher.removeAllListeners();
 
                 expect(changeEvent.callCount).to.be.equal(1);
                 expect(putEvent.callCount).to.be.equal(1);
                 expect(expireEvent.callCount).to.be.equal(0);
                 expect(deleteEvent.callCount).to.be.equal(0);
-
-            } catch (e) {
-                console.error(e);
-            } finally {
-
             }
-
-
+            catch (e) {
+                console.error(e);
+            }
         }).timeout(5000);
 
         it('should cancel after revoke', async () => {
-            let instanceId = `register-test-${uuidv4()}`
-            try {
-                let putEvent = sinon.spy();
-                let changeEvent = sinon.spy();
-                let deleteEvent = sinon.spy();
-                let watch = await etcd.discovery.watch({ instanceId });
-                expect(watch).to.have.property('watcher')
-                //   expect(watch).to.have.property('obj');
-                expect(watch.data).to.be.empty;
-                watch.watcher.on('disconnected', () => console.log('disconnected...'))
-                watch.watcher.on('connected', () => console.log('successfully reconnected!'))
-                watch.watcher.on('put', res => {
-                    console.log('test put Lease:', res.value.toString())
-                    putEvent();
-                    _semaphore.callDone();
-                })
-                watch.watcher.on('delete', res => {
-                    console.log('test delete Lease:', res.value.toString())
-                    deleteEvent();
-                    _semaphore.callDone();
-                })
-                watch.watcher.on('data', res => {
-                    changeEvent();
-                    console.log('test data Lease:')
-                    //callDone();
-
-                })
-                let lease = await etcd.discovery.register({ ttl: 5, interval: 1000, instanceId, data: { bla: 'bla' } });
-                lease.close();
-                await delay(2000);
-                console.log(`before await done`)
-                await _semaphore.done({ doneAmount: 2 });
-                _semaphore = null;
-                console.log(`after await done`)
-                watch.watcher.removeAllListeners()
-                console.log(`revived two calldone() `, changeEvent.callCount, putEvent.callCount, deleteEvent.callCount);
-                expect(changeEvent.callCount).to.be.equal(2);
-                expect(putEvent.callCount).to.be.equal(1);
-                expect(deleteEvent.callCount).to.be.equal(1);
-
-            } catch (e) {
-                console.error(e);
-            }
-        }).timeout(26000);
+            const instanceId = `register-test-${uuidv4()}`;
+            const putEvent = sinon.spy();
+            const changeEvent = sinon.spy();
+            const deleteEvent = sinon.spy();
+            const watch = await etcd.discovery.watch({ instanceId });
+            expect(watch).to.have.property('watcher');
+            expect(watch.data).to.be.empty;
+            watch.watcher.on('disconnected', () => console.log('disconnected...'));
+            watch.watcher.on('connected', () => console.log('successfully reconnected!'));
+            watch.watcher.on('put', () => {
+                putEvent();
+                _semaphore.callDone();
+            });
+            watch.watcher.on('delete', () => {
+                deleteEvent();
+                _semaphore.callDone();
+            });
+            watch.watcher.on('data', () => {
+                changeEvent();
+                // callDone();
+            });
+            const lease = await etcd.discovery.register({
+                ttl: 1, instanceId, data: { bla: 'bla' }
+            });
+            lease.close();
+            await delay(2000);
+            await _semaphore.done({ doneAmount: 2 });
+            _semaphore = null;
+            watch.watcher.removeAllListeners();
+            expect(changeEvent.callCount).to.be.equal(2);
+            expect(putEvent.callCount).to.be.equal(1);
+            expect(deleteEvent.callCount).to.be.equal(1);
+        }).timeout(10000);
 
         it('should update data', async () => {
-            let instanceId = `'update-data-test-${uuidv4()}`
-            let setEvent = sinon.spy();
+            const instanceId = `'update-data-test-${uuidv4()}`;
+            const setEvent = sinon.spy();
             let data = { bla: 'bla' };
-            let watch = await etcd.discovery.watch({ instanceId });
+            const watch = await etcd.discovery.watch({ instanceId });
 
-            watch.watcher.on('put', d => {
-                expect(JSON.parse(d.value.toString())).to.have.deep.keys(data)
+            watch.watcher.on('put', (d) => {
+                expect(JSON.parse(d.value.toString())).to.have.deep.keys(data);
                 data = { bla: 'bla2' };
                 setEvent();
                 _semaphore.callDone();
-                if (JSON.parse(d.value.toString()).bla == 'bla2') {
+                if (JSON.parse(d.value.toString()).bla === 'bla2') {
                     return;
                 }
-                else {
-                    etcd.discovery.updateRegisteredData(data);
-                }
-                console.log('calling put', d.value.toString());
+                etcd.discovery.updateRegisteredData(data);
             });
-            await etcd.discovery.register({ ttl: 4, interval: 2000, instanceId, data });
+            await etcd.discovery.register({
+                ttl: 4, instanceId, data
+            });
 
             await _semaphore.done({ doneAmount: 2 });
-            watch.watcher.removeAllListeners()
+            watch.watcher.removeAllListeners();
             expect(setEvent.callCount).to.be.equal(2);
-        }).timeout(10000)
+        }).timeout(10000);
     });
     describe('etcd set get', () => {
         it('etcd set and get simple test', async () => {
-            let instanceId = `'etcd-set-get-test-${uuidv4()}`
-            let data = { data: { bla: 'bla' } }
-            let etcdSet = await etcd.services.set({ data, instanceId })
-            let etcdGet = await etcd.services.get({ instanceId, prefix: 'services' })
-            expect(etcdGet.data).to.have.deep.keys(data.data)
+            const instanceId = `'etcd-set-get-test-${uuidv4()}`;
+            const data = { data: { bla: 'bla' } };
+            await etcd.services.set({ data, instanceId });
+            const etcdGet = await etcd.services.get({ instanceId, prefix: 'services' });
+            expect(etcdGet.data).to.have.deep.keys(data.data);
         }).timeout(1000);
         it('etcd sort with limit', async () => {
-            let instanceId = `'etcd-set-get-test-${uuidv4()}`
+            const instanceId = `'etcd-set-get-test-${uuidv4()}`;
             for (let i = 0; i < 10; i++) {
-                let a = await etcd.etcd3.put(`${instanceId}/${i}`, { val: `val${i}` }, null)
+                await etcd.etcd3.put(`${instanceId}/${i}`, { val: `val${i}` }, null);
                 await delay(100);
             }
             await delay(200);
-            let data = await etcd.etcd3.getSortLimit(`${instanceId}`, ["Mod", "Ascend"], 6);
-            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal(`val0`)
-            expect(Object.keys(data).length).to.equal(6)
+            const data = await etcd.etcd3.getSortLimit(`${instanceId}`, ['Mod', 'Ascend'], 6);
+            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val0');
+            expect(Object.keys(data).length).to.equal(6);
         });
-    });
-})
-
-describe('etcd test init with instanceId ', () => {
-    let instanceId = '';
-    let jobId = '';
-    let taskId = '';
-    beforeEach(async () => {
-        etcd = new Etcd();
-        instanceId = `etcd-set-get-test-${uuidv4()}`;
-        jobId = `jobid-${uuidv4()}`;
-        taskId = `taskid-${uuidv4()}`;
-        await etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-        _semaphore = new semaphore();
     });
     describe('services', () => {
-        it('should get without specific instanceId', async () => {
-            let data = { data: { bla: 'bla' } }
-            let etcdSet = await etcd.services.set(data)
-            let etcdGet = await etcd.services.get({ prefix: 'services' })
-            expect(etcdGet).to.have.deep.keys(data.data)
-        }).timeout(10000);
-        it('should get without specific instanceId with suffix', async () => {
-            let suffix = 'test'
-            let data = { data: { bla: 'bla' } };
-            let etcdSet = await etcd.services.set({ data, suffix })
-            let etcdGet = await etcd.services.get({ prefix: 'services', suffix })
-            expect(etcdGet.data).to.have.deep.keys(data.data)
-        }).timeout(10000);
-
-    });
-    describe('pipeline driver api', () => {
-        it('should set and get tasks', async () => {
-            let { pipelineDriver } = etcd.services;
-            const jobId = `jobid-${uuidv4()}`;
-            let taskId = `taskid-${uuidv4()}`;
-            let data = { bla: 'bla' };
-            let etcdSet = await pipelineDriver.setTaskState({ jobId, taskId, data });
-            let etcdGet = await pipelineDriver.getTaskState({ jobId, taskId });
-            expect(etcdGet).to.have.deep.keys(data);
+        describe('get/set', () => {
+            it('should get without specific instanceId', async () => {
+                const data = { data: { bla: 'bla' } };
+                await etcd.services.set(data);
+                const etcdGet = await etcd.services.get({ prefix: 'services' });
+                expect(etcdGet).to.have.deep.keys(data.data);
+            }).timeout(10000);
+            it('should get without specific instanceId with suffix', async () => {
+                const suffix = 'test';
+                const data = { data: { bla: 'bla' } };
+                await etcd.services.set({ data, suffix });
+                const etcdGet = await etcd.services.get({ prefix: 'services', suffix });
+                expect(etcdGet.data).to.have.deep.keys(data.data);
+            }).timeout(10000);
         });
-
-        it('should get list', async () => {
-            let { pipelineDriver } = etcd.services;
-
-            let taskId = `taskid-${uuidv4()}`;
-            let data = { bla: 'bla' };
-            let etcdSet = await pipelineDriver.setTaskState({ taskId, data });
-            let etcdGet = await pipelineDriver.getDriverTasks({ taskId });
-            expect(etcdGet[Object.keys(etcdGet)[0]]).to.have.deep.keys({ taskId, ...data });
+        describe('pipeline-driver', () => {
+            it('should set and get tasks', async () => {
+                const { pipelineDriver } = etcd.services;
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await pipelineDriver.setTaskState({ jobId, taskId, data });
+                const etcdGet = await pipelineDriver.getTaskState({ jobId, taskId });
+                expect(etcdGet).to.have.deep.keys(data);
+            });
+            it('should get list', async () => {
+                const { pipelineDriver } = etcd.services;
+                const taskId = `taskid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await pipelineDriver.setTaskState({ taskId, data });
+                const etcdGet = await pipelineDriver.getDriverTasks({ taskId });
+                expect(etcdGet[Object.keys(etcdGet)[0]]).to.have.deep.keys({ taskId, ...data });
+            });
+            it('should delete state', async () => {
+                const { pipelineDriver } = etcd.services;
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { bla: 'bla' };
+                await pipelineDriver.setState({ jobId, data });
+                await pipelineDriver.deleteState({ jobId });
+                const etcdGet = await pipelineDriver.getState({ jobId });
+                expect(etcdGet).to.be.null;
+            });
         });
-        it('should delete state', async () => {
-            let { pipelineDriver } = etcd.services;
-            const jobId = `jobid-${uuidv4()}`;
-            let taskId = `taskid-${uuidv4()}`;
-            let data = { bla: 'bla' };
-            let etcdSet = await pipelineDriver.setState({ jobId, taskId });
-            let etcdDelete = await pipelineDriver.deleteState({ jobId });
-            let etcdGet = await pipelineDriver.getState({ jobId });
-            expect(etcdGet).to.be.empty;
+        describe('algorithm-queue', () => {
+            it('get', async () => {
+                const { algorithmQueue } = etcd.services;
+                const queueName = `algorithm-x-${uuidv4()}`;
+                const queue = { bla: 'bla' };
+                await algorithmQueue.store({ queueName, queue });
+                const etcdGet = await algorithmQueue.get({ queueName });
+                expect(etcdGet).to.have.deep.keys(queue);
+            });
+            it('store', async () => {
+                const { algorithmQueue } = etcd.services;
+                const queueName = `algorithm-x-${uuidv4()}`;
+                const queue = { bla: 'bla' };
+                await algorithmQueue.store({ queueName, queue });
+                const etcdGet = await algorithmQueue.get({ queueName });
+                expect(etcdGet).to.have.deep.keys(queue);
+            });
         });
     });
     describe('jobs', () => {
@@ -226,8 +206,8 @@ describe('etcd test init with instanceId ', () => {
             it('should set state', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'started';
-                let etcdSet = await etcd.jobs.setState({ state, jobId });
-                let etcdGet = await etcd.jobs.getState({ jobId });
+                await etcd.jobs.setState({ state, jobId });
+                const etcdGet = await etcd.jobs.getState({ jobId });
                 expect(etcdGet.state).to.equal(state);
             });
         });
@@ -252,6 +232,13 @@ describe('etcd test init with instanceId ', () => {
                 });
                 etcd.jobs.stop({ reason, jobId });
             });
+            it('should get watch object', async () => {
+                const state = 'started';
+                const jobId = `jobid-${uuidv4()}`;
+                await etcd.jobs.setState({ state, jobId });
+                const object = await etcd.jobs.watch({ jobId });
+                expect(object).to.deep.equal({ state });
+            });
         });
         describe('unwatch', () => {
             it('should watch stateChanged', async () => {
@@ -259,7 +246,7 @@ describe('etcd test init with instanceId ', () => {
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
                 await etcd.jobs.watch({ jobId });
-                etcd.jobs.on('change', (res) => {
+                etcd.jobs.on('change', () => {
                     isCalled = true;
                 });
                 await etcd.jobs.unwatch({ jobId });
@@ -274,28 +261,27 @@ describe('etcd test init with instanceId ', () => {
             it('should set and get results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, bla: 'bla' };
-                let etcdSet = await etcd.jobResults.setResults({ data: data, jobId });
-                let etcdGet = await etcd.jobResults.getResult({ jobId });
-                expect(etcdGet).to.have.deep.keys(data)
+                await etcd.jobResults.setResults({ data, jobId });
+                const etcdGet = await etcd.jobResults.getResult({ jobId });
+                expect(etcdGet).to.have.deep.keys(data);
             });
             it('should get results by status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
                 const jobId2 = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 const status = 'completed';
-                await etcd.jobResults.setResults({ data: data, jobId: jobId1 });
-                await etcd.jobResults.setResults({ data: data, jobId: jobId2 });
+                await etcd.jobResults.setResults({ data, jobId: jobId1 });
+                await etcd.jobResults.setResults({ data, jobId: jobId2 });
                 await etcd.jobResults.setStatus({ data: 'failed', jobId: jobId1 });
                 await etcd.jobResults.setStatus({ data: 'completed', jobId: jobId2 });
-                let etcdGet = await etcd.jobResults.getResultsByStatus({ status: status });
+                const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
                 expect(etcdGet[0].status).to.equal(status);
-
             });
             it('should set and get status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, status: 'completed' };
-                let etcdSet = await etcd.jobResults.setStatus({ data: data, jobId: jobId });
-                let etcdGet = await etcd.jobResults.getStatus({ jobId: jobId });
+                await etcd.jobResults.setStatus({ data, jobId });
+                const etcdGet = await etcd.jobResults.getStatus({ jobId });
                 expect(etcdGet).to.deep.equal(data);
             });
         });
@@ -329,7 +315,7 @@ describe('etcd test init with instanceId ', () => {
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
                 await etcd.jobResults.watch({ jobId });
-                etcd.jobResults.on('status-change', (res) => {
+                etcd.jobResults.on('status-change', () => {
                     isCalled = true;
                 });
                 await etcd.jobResults.unwatch({ jobId });
@@ -345,22 +331,30 @@ describe('etcd test init with instanceId ', () => {
             it('should set results', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                const etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, result: data.result });
+                await etcd.tasks.setState({
+                    jobId: jobID, taskId, status: data.status, result: data.result
+                });
                 const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('should set status', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
-                let etcdSet = await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
-                let etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
+                await etcd.tasks.setState({
+                    jobId: jobID, taskId, status: data.status, error: data.error
+                });
+                const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('should get jobs tasks', async () => {
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
-                await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
-                await etcd.tasks.setState({ jobId: jobID, taskId, status: data.status, error: data.error });
+                await etcd.tasks.setState({
+                    jobId: jobID, taskId, status: data.status, error: data.error
+                });
+                await etcd.tasks.setState({
+                    jobId: jobID, taskId, status: data.status, error: data.error
+                });
                 const list = await etcd.tasks.list({ jobId: jobID });
                 const task = list.values().next();
                 expect(task.value).to.have.property('status');
@@ -371,44 +365,51 @@ describe('etcd test init with instanceId ', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                const watch = await etcd.tasks.watch({ jobId, taskId });
+                await etcd.tasks.watch({ jobId, taskId });
                 etcd.tasks.on('change', async (res) => {
                     expect({ jobId, ...data, taskId }).to.have.deep.keys(res);
                     await etcd.tasks.unwatch({ jobId, taskId });
                     _semaphore.callDone();
                 });
-                etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                etcd.tasks.setState({
+                    jobId, taskId, status: data.status, result: data.result
+                });
                 await _semaphore.done();
             });
             it('should watch all keys', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                const watch = await etcd.tasks.watch({ jobId });
+                await etcd.tasks.watch({ jobId });
                 etcd.tasks.on('change', async (res) => {
                     const obj = { ...data, jobId, taskId };
                     expect(obj).to.have.deep.keys(res);
                     etcd.tasks.unwatch();
                     _semaphore.callDone();
                 });
-                etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                etcd.tasks.setState({
+                    jobId, taskId, status: data.status, result: data.result
+                });
                 await _semaphore.done();
             });
             it('should return the set obj on watch', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                const etcdSet = await etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                await etcd.tasks.setState({
+                    jobId, taskId, status: data.status, result: data.result
+                });
                 const watch = await etcd.tasks.watch({ jobId, taskId });
                 expect(data).to.have.deep.keys(watch);
             });
             it('should throw error if watch already exists', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
-                const watch = await etcd.tasks.watch({ jobId, taskId });
+                await etcd.tasks.watch({ jobId, taskId });
                 try {
                     await etcd.tasks.watch({ jobId, taskId });
-                } catch (error) {
+                }
+                catch (error) {
                     expect(error.message).to.equals(`already watching ${JSON.stringify({ jobId, taskId })}`);
                 }
             });
@@ -418,38 +419,39 @@ describe('etcd test init with instanceId ', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                const watch = await etcd.tasks.watch({ jobId, taskId });
+                await etcd.tasks.watch({ jobId, taskId });
                 etcd.tasks.on('change', (res) => {
                     expect(data).to.have.deep.keys(res);
                 });
                 await etcd.tasks.unwatch({ jobId, taskId });
-                etcd.tasks.setState({ jobId, taskId, status: data.status, result: data.result });
+                etcd.tasks.setState({
+                    jobId, taskId, status: data.status, result: data.result
+                });
             });
         });
     });
     describe('execution', () => {
         describe('sets', () => {
             const jobID = `jobid-${uuidv4()}`;
-            const taskId = `taskid-${uuidv4()}`;
             it('should set results', async () => {
                 const pipeline = {
-                    "name": "algo6",
-                    "nodes": [
+                    name: 'algo6',
+                    nodes: [
                         {
-                            "nodeName": "string",
-                            "algorithmName": "string",
-                            "input": [
-                                "string"
+                            nodeName: 'string',
+                            algorithmName: 'string',
+                            input: [
+                                'string'
                             ]
                         }
                     ],
-                    "flowInput": {},
-                    "webhook": {
-                        "progressHook": "string",
-                        "resultHook": "string"
+                    flowInput: {},
+                    webhook: {
+                        progressHook: 'string',
+                        resultHook: 'string'
                     }
-                }
-                const etcdSet = await etcd.execution.setExecution({ jobId: jobID, data: pipeline });
+                };
+                await etcd.execution.setExecution({ jobId: jobID, data: pipeline });
                 const etcdGet = await etcd.execution.getExecution({ jobId: jobID });
                 expect(pipeline).to.have.deep.keys(etcdGet);
             });
@@ -458,9 +460,9 @@ describe('etcd test init with instanceId ', () => {
     describe('pipelines', () => {
         describe('sets', () => {
             it('should set results', async () => {
-                const name = `pipeline-1`;
+                const name = 'pipeline-1';
                 const data = { bla: 'bla' };
-                const etcdSet = await etcd.pipelines.setPipeline({ name, data });
+                await etcd.pipelines.setPipeline({ name, data });
                 const etcdGet = await etcd.pipelines.getPipeline({ name });
                 expect(etcdGet).to.have.deep.keys(data);
             });
@@ -471,59 +473,40 @@ describe('etcd test init with instanceId ', () => {
         });
         describe('delete', () => {
             it('should delete pipeline', async () => {
-                const name = `pipeline-delete`;
+                const name = 'pipeline-delete';
                 const data = { bla: 'bla' };
-                const etcdSet = await etcd.pipelines.setPipeline({ name, data });
-                const etcdDelete = await etcd.pipelines.deletePipeline({ name });
+                await etcd.pipelines.setPipeline({ name, data });
+                await etcd.pipelines.deletePipeline({ name });
                 const etcdGet = await etcd.pipelines.getPipeline({ name });
                 expect(etcdGet).to.be.null;
             });
         });
         describe('watch', () => {
             it('should watch specific pipeline', async () => {
-                const name = `pipeline-2`;
+                const name = 'pipeline-2';
                 const data = { bla: 'bla' };
                 await etcd.pipelines.watch({ name });
                 etcd.pipelines.on('change', (res) => {
                     console.log(res);
-                    expect({ name, data }).to.have.deep.keys(res)
+                    expect({ name, data }).to.have.deep.keys(res);
                     etcd.pipelines.unwatch();
                     _semaphore.callDone();
-
                 });
                 await etcd.pipelines.setPipeline({ name, data });
                 await _semaphore.done();
             });
             it('should watch all pipelines', async () => {
-                const name = `pipeline-3`;
+                const name = 'pipeline-3';
                 const data = { bla: 'bla' };
-                await etcd.pipelines.watch()
+                await etcd.pipelines.watch();
                 etcd.pipelines.on('change', (res) => {
-                    expect({ name, data }).to.have.deep.keys(res)
+                    expect({ name, data }).to.have.deep.keys(res);
                     etcd.pipelines.unwatch();
-                    _semaphore.callDone()
+                    _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });
                 await _semaphore.done();
             });
         });
     });
-    describe('algorithm-queue', () => {
-        it('get', async () => {
-            const queueName = `algorithm-x-${uuidv4()}`;
-            const queue = { bla: 'bla' };
-            const etcdSet = await etcd.algorithmQueue.store({ queueName,queue });
-            const etcdGet = await etcd.algorithmQueue.get({ queueName });
-            expect(etcdGet).to.have.deep.keys(queue);
-        });
-        it('store', async () => {
-            const queueName = `algorithm-x-${uuidv4()}`;
-            const queue = { bla: 'bla' };
-            const etcdSet = await etcd.algorithmQueue.store({ queueName,queue });
-            const etcdGet = await etcd.algorithmQueue.get({ queueName });
-            expect(etcdGet).to.have.deep.keys(queue);
-      
-
-        });
-    });
-})
+});
