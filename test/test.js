@@ -260,10 +260,10 @@ describe('etcd', () => {
         describe('sets', () => {
             it('should set and get results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { jobId, bla: 'bla' };
+                const data = { bla: 'bla' };
                 await etcd.jobResults.setResults({ data, jobId });
                 const etcdGet = await etcd.jobResults.getResult({ jobId });
-                expect(etcdGet).to.have.deep.keys(data);
+                expect(etcdGet).to.have.deep.keys({ ...data, jobId });
             });
             it('should get results by status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
@@ -277,11 +277,28 @@ describe('etcd', () => {
                 const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
                 expect(etcdGet[0].status).to.equal(status);
             });
-            it('should set and get status', async () => {
+            it('should set and get result status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { jobId, status: 'completed' };
-                await etcd.jobResults.setStatus({ data, jobId });
-                const etcdGet = await etcd.jobResults.getStatus({ jobId });
+                const data = { bla: 'bla' };
+                const status = 'special';
+                await etcd.jobResults.setLog({ data, jobId });
+                await etcd.jobResults.setLog({ data, jobId });
+                await etcd.jobResults.setResults({ data, jobId });
+                await etcd.jobResults.setResults({ data, jobId });
+                await etcd.jobResults.setStatus({ data: status, jobId });
+                await etcd.jobResults.setStatus({ data: status, jobId });
+                const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
+                expect(etcdGet).to.be.an('array');
+                expect(etcdGet[0]).to.have.property('jobId');
+                expect(etcdGet[0]).to.have.property('log');
+                expect(etcdGet[0]).to.have.property('result');
+                expect(etcdGet[0]).to.have.property('status');
+            });
+            it('should set and get log', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { jobId, status: 'sent' };
+                await etcd.jobResults.setLog({ data, jobId });
+                const etcdGet = await etcd.jobResults.getLog({ jobId });
                 expect(etcdGet).to.deep.equal(data);
             });
         });
@@ -432,8 +449,8 @@ describe('etcd', () => {
     });
     describe('execution', () => {
         describe('sets', () => {
-            const jobID = `jobid-${uuidv4()}`;
             it('should set results', async () => {
+                const jobID = `jobid-${uuidv4()}`;
                 const pipeline = {
                     name: 'algo6',
                     nodes: [
@@ -468,7 +485,7 @@ describe('etcd', () => {
             });
             it('should get all pipelines', async () => {
                 const pipelines = await etcd.pipelines.getPipelines();
-                expect(pipelines[0]).to.have.deep.keys({ bla: 'bla' });
+                expect(pipelines).to.be.an('array');
             });
         });
         describe('delete', () => {
