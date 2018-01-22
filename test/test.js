@@ -277,12 +277,28 @@ describe('etcd', () => {
                 const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
                 expect(etcdGet[0].status).to.equal(status);
             });
+            it('should set and get status log', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { jobId, status: 'sent' };
+                await etcd.jobResults.setStatusLog({ data, jobId });
+                const etcdGet = await etcd.jobResults.getStatusLog({ jobId });
+                expect(etcdGet).to.deep.equal(data);
+            });
+            it('should set and get results log', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { jobId, status: 'sent' };
+                await etcd.jobResults.setResultsLog({ data, jobId });
+                const etcdGet = await etcd.jobResults.getResultsLog({ jobId });
+                expect(etcdGet).to.deep.equal(data);
+            });
             it('should set and get result status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 const status = 'special';
-                await etcd.jobResults.setLog({ data, jobId });
-                await etcd.jobResults.setLog({ data, jobId });
+                await etcd.jobResults.setResultsLog({ data, jobId });
+                await etcd.jobResults.setResultsLog({ data, jobId });
+                await etcd.jobResults.setStatusLog({ data, jobId });
+                await etcd.jobResults.setStatusLog({ data, jobId });
                 await etcd.jobResults.setResults({ data, jobId });
                 await etcd.jobResults.setResults({ data, jobId });
                 await etcd.jobResults.setStatus({ data: status, jobId });
@@ -290,16 +306,10 @@ describe('etcd', () => {
                 const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
                 expect(etcdGet).to.be.an('array');
                 expect(etcdGet[0]).to.have.property('jobId');
-                expect(etcdGet[0]).to.have.property('log');
+                expect(etcdGet[0]).to.have.property('logResults');
+                expect(etcdGet[0]).to.have.property('logStatus');
                 expect(etcdGet[0]).to.have.property('result');
                 expect(etcdGet[0]).to.have.property('status');
-            });
-            it('should set and get log', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const data = { jobId, status: 'sent' };
-                await etcd.jobResults.setLog({ data, jobId });
-                const etcdGet = await etcd.jobResults.getLog({ jobId });
-                expect(etcdGet).to.deep.equal(data);
             });
         });
         describe('watch', () => {
