@@ -306,8 +306,8 @@ describe('etcd', () => {
                 const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
                 expect(etcdGet).to.be.an('array');
                 expect(etcdGet[0]).to.have.property('jobId');
-                expect(etcdGet[0]).to.have.property('logResults');
-                expect(etcdGet[0]).to.have.property('logStatus');
+                expect(etcdGet[0]).to.have.property('resultLog');
+                expect(etcdGet[0]).to.have.property('statusLog');
                 expect(etcdGet[0]).to.have.property('result');
                 expect(etcdGet[0]).to.have.property('status');
             });
