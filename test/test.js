@@ -262,7 +262,7 @@ describe('etcd', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 await etcd.jobResults.setResults({ data, jobId });
-                const etcdGet = await etcd.jobResults.getResult({ jobId });
+                const etcdGet = await etcd.jobResults.getResults({ jobId });
                 expect(etcdGet).to.have.deep.keys({ ...data, jobId });
             });
             it('should get results by status', async () => {
@@ -280,25 +280,25 @@ describe('etcd', () => {
             it('should set and get status log', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, status: 'sent' };
-                await etcd.jobResults.setStatusLog({ data, jobId });
-                const etcdGet = await etcd.jobResults.getStatusLog({ jobId });
+                await etcd.jobResults.setWebhooksStatus({ data, jobId });
+                const etcdGet = await etcd.jobResults.getWebhooksStatus({ jobId });
                 expect(etcdGet).to.deep.equal(data);
             });
             it('should set and get results log', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, status: 'sent' };
-                await etcd.jobResults.setResultsLog({ data, jobId });
-                const etcdGet = await etcd.jobResults.getResultsLog({ jobId });
+                await etcd.jobResults.setWebhooksResults({ data, jobId });
+                const etcdGet = await etcd.jobResults.getWebhooksResults({ jobId });
                 expect(etcdGet).to.deep.equal(data);
             });
             it('should set and get result status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { bla: 'bla' };
                 const status = 'special';
-                await etcd.jobResults.setResultsLog({ data, jobId });
-                await etcd.jobResults.setResultsLog({ data, jobId });
-                await etcd.jobResults.setStatusLog({ data, jobId });
-                await etcd.jobResults.setStatusLog({ data, jobId });
+                await etcd.jobResults.setWebhooksResults({ data, jobId });
+                await etcd.jobResults.setWebhooksResults({ data, jobId });
+                await etcd.jobResults.setWebhooksStatus({ data, jobId });
+                await etcd.jobResults.setWebhooksStatus({ data, jobId });
                 await etcd.jobResults.setResults({ data, jobId });
                 await etcd.jobResults.setResults({ data, jobId });
                 await etcd.jobResults.setStatus({ data: status, jobId });
@@ -306,10 +306,12 @@ describe('etcd', () => {
                 const etcdGet = await etcd.jobResults.getResultsByStatus({ status });
                 expect(etcdGet).to.be.an('array');
                 expect(etcdGet[0]).to.have.property('jobId');
-                expect(etcdGet[0]).to.have.property('resultLog');
-                expect(etcdGet[0]).to.have.property('statusLog');
                 expect(etcdGet[0]).to.have.property('result');
                 expect(etcdGet[0]).to.have.property('status');
+                expect(etcdGet[0]).to.have.property('webhooks');
+                expect(etcdGet[0]).to.have.property('webhooks');
+                expect(etcdGet[0].webhooks).to.have.property('result');
+                expect(etcdGet[0].webhooks).to.have.property('status');
             });
         });
         describe('watch', () => {
