@@ -3,6 +3,7 @@ const { Etcd3 } = require('etcd3');
 class etcdClient {
     constructor(options) {
         this.client = new Etcd3(options);
+        this._lease = null;
     }
 
     async get(path, { isPrefix = true } = {}) {
@@ -31,15 +32,22 @@ class etcdClient {
     }
 
     async register(ttl, path, value) {
-        const lease = this.client.lease(ttl);
+        if (this._lease) {
+            throw new Error('cannot register twice');
+        }
+        this._lease = this.client.lease(ttl);
         try {
-            await lease.put(path).value(JSON.stringify(value));
-            await lease.keepaliveOnce();
+            await this._lease.put(path).value(JSON.stringify(value));
+            await this._lease.keepaliveOnce();
         }
         catch (e) {
             console.error(e);
         }
-        return lease;
+        return this._lease;
+    }
+
+    async updateRegisteredData(path, value) {
+        return this._lease.put(path).value(JSON.stringify(value));
     }
 
     async put(path, value) {
