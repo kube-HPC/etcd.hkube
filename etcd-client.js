@@ -1,81 +1,77 @@
-const Etcd3Client = require('./etcd3-client');
+const { Etcd3 } = require('etcd3');
 const EventEmitter = require('events');
-const djsv = require('djsv');
-const Discovery = require('./lib/discovery/discovery');
-const Services = require('./lib/services/services');
-const Jobs = require('./lib/jobs/jobs');
-const JobResults = require('./lib/jobResults/jobResults');
-const Tasks = require('./lib/tasks/tasks');
-const Pipelines = require('./lib/pipelines/pipelines');
-const Execution = require('./lib/execution/execution');
-
-const {
-    registerSchema, watchSchema, initSchema, getSchema, setSchema
-} = require('./lib/schema');
 
 class EtcdClient extends EventEmitter {
-    constructor() {
+    constructor(options) {
         super();
-        this.instanceId = '';
-        this.registerSchema = djsv(registerSchema);
-        this.watchSchema = djsv(watchSchema);
-        this.initSchema = djsv(initSchema);
-        this.getSchema = djsv(getSchema);
-        this.setSchema = djsv(setSchema);
-        this.discovery = new Discovery();
-        this.services = new Services();
-        this.jobs = new Jobs();
-        this.jobResults = new JobResults();
-        this.tasks = new Tasks();
-        this.pipelines = new Pipelines();
-        this.execution = new Execution();
+        this.client = new Etcd3(options);
+        this._lease = null;
     }
 
-    /**
-     * init data for starting
-     * @param {object} options 
-     * @param {object} options.etcd contains object for connection {protocol:host:"host ip", port:"port"} 
-     * @param {string} options.etcd.protocol protocol http or https 
-     * @param {string} options.etcd.host host can be name or ip 
-     * @param {integer} options.etcd.port port number 
-     * @param {object} options.serviceName the path that will be store on etcd from a const file that contains etcd names 
-     * @param {object} options.taskId workerID
-     * @param {object} options.jobId the pipeline instanceID
-     * @param {string} options.instanceId the specific guid the default data is a generated guid
-     * @memberOf etcdDiscovery
-     */
-    async init(options) {
-        this._options = options;
-        const initSchemaConfig = this.initSchema(options);
-        if (initSchemaConfig.valid) {
-            this._etcdConfigPath = `${options.etcd.protocol}://${options.etcd.host}:${options.etcd.port}`;
-            this.etcd3 = new Etcd3Client({ hosts: this._etcdConfigPath });
-            this._serviceName = options.serviceName;
-            this._instanceId = options.instanceId;
-            this.jobId = options.jobId;
-            this.taskId = options.taskId;
-            this.discovery.init(this);
-            this.services.init(this);
-            this.jobs.init(this);
-            this.jobResults.init(this);
-            this.tasks.init(this);
-            this.pipelines.init(this);
-            this.execution.init(this);
-            return this;
+    async get(path, { isPrefix = true } = {}) {
+        if (isPrefix) {
+            return this.client.getAll().prefix(path);
         }
-        throw new Error(initSchemaConfig.error);
+        const res = await this.client.get(path);
+        return JSON.parse(res);
     }
 
-    _tryParseJSON(json) {
-        let parsed = json;
+    async getAndWatch(path, options) {
+        const data = await this.get(path, options);
+        const watcher = await this.watch(path);
+        return { data, watcher };
+    }
+
+    async delete(path, { isPrefix = false } = {}) {
+        if (isPrefix) {
+            return this.client.delete().prefix(path);
+        }
+        return this.client.delete().key(path);
+    }
+
+    async watch(path) {
+        return this.client.watch().prefix(path).create();
+    }
+
+    async register(ttl, path, value) {
+        if (this._lease && this._lease.state === 0) {
+            throw new Error('cannot register twice');
+        }
+        this._ttl = ttl;
+        this._path = path;
+        this._lease = this.client.lease(this._ttl);
         try {
-            parsed = JSON.parse(json);
+            await this._lease.put(this._path).value(JSON.stringify(value));
+            await this._lease.keepaliveOnce();
         }
         catch (e) {
             console.error(e);
         }
-        return parsed;
+        return this._lease;
+    }
+
+    async updateRegisteredData(value) {
+        try {
+            await this._lease.put(this._path).value(JSON.stringify(value));
+        }
+        catch (error) {
+            await this.register(this._ttl, this._path, value);
+        }
+        return this._lease;
+    }
+
+    async put(path, value) {
+        return this.client.put(path).value(JSON.stringify(value));
+    }
+
+    // sort(target: "Key" | "Version" | "Create" | "Mod" | "Value", order: "None" | "Ascend" | "Descend"):
+    async getSortLimit(path, sort = ['Mod', 'Ascend'], limit = 100) {
+        return this.client.getAll()
+            .prefix(path)
+            .sort(...sort)
+            .limit(limit);
     }
 }
+
 
 module.exports = EtcdClient;

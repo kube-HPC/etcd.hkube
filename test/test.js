@@ -1,6 +1,7 @@
 
 const { expect } = require('chai');
 const Etcd = require('../index');
+const Watcher = require('../lib/watch/watcher');
 const Semaphore = require('await-done').semaphore;
 const sinon = require('sinon');
 const delay = require('await-delay');
@@ -19,32 +20,28 @@ describe('etcd', () => {
         it('should register key and update ttl according to interval', async () => {
             const instanceId = `register-test-${uuidv4()}`;
             try {
+                const pathToWatch = 'path/to/watch';
+                const watcher = new Watcher(etcd._client);
                 const putEvent = sinon.spy();
                 const changeEvent = sinon.spy();
                 const deleteEvent = sinon.spy();
                 const expireEvent = sinon.spy();
-                const watch = await etcd.discovery.watch({ instanceId });
+                const watch = await watcher.watch(pathToWatch);
                 expect(watch).to.have.property('watcher');
-                //   expect(watch).to.have.property('obj');
-                expect(watch.data).to.be.empty;
+                expect(watch).to.have.property('data');
                 watch.watcher.on('disconnected', () => console.log('disconnected...'));
                 watch.watcher.on('connected', () => console.log('successfully reconnected!'));
                 watch.watcher.on('put', (res) => {
-                    console.log('testLease:', res.value.toString());
                     putEvent();
                 });
                 watch.watcher.on('delete', (res) => {
-                    console.log('testdeleteLease:', res.value.toString());
                     deleteEvent();
                 });
                 watch.watcher.on('data', () => {
                     changeEvent();
-                    console.log('testdaraLease:');
                     _semaphore.callDone();
                 });
-                await etcd.discovery.register({
-                    ttl: 10, instanceId, data: { bla: 'bla' }
-                });
+                await etcd._client.put(pathToWatch, { data: 'bla' });
                 await _semaphore.done({ doneAmount: 1 });
                 watch.watcher.removeAllListeners();
 
@@ -57,83 +54,23 @@ describe('etcd', () => {
                 console.error(e);
             }
         }).timeout(5000);
-
-        it('should cancel after revoke', async () => {
-            const instanceId = `register-test-${uuidv4()}`;
-            const putEvent = sinon.spy();
-            const changeEvent = sinon.spy();
-            const deleteEvent = sinon.spy();
-            const watch = await etcd.discovery.watch({ instanceId });
-            expect(watch).to.have.property('watcher');
-            expect(watch.data).to.be.empty;
-            watch.watcher.on('disconnected', () => console.log('disconnected...'));
-            watch.watcher.on('connected', () => console.log('successfully reconnected!'));
-            watch.watcher.on('put', () => {
-                putEvent();
-                _semaphore.callDone();
-            });
-            watch.watcher.on('delete', () => {
-                deleteEvent();
-                _semaphore.callDone();
-            });
-            watch.watcher.on('data', () => {
-                changeEvent();
-                // callDone();
-            });
-            const lease = await etcd.discovery.register({
-                ttl: 1, instanceId, data: { bla: 'bla' }
-            });
-            lease.close();
-            await delay(2000);
-            await _semaphore.done({ doneAmount: 2 });
-            _semaphore = null;
-            watch.watcher.removeAllListeners();
-            expect(changeEvent.callCount).to.be.equal(2);
-            expect(putEvent.callCount).to.be.equal(1);
-            expect(deleteEvent.callCount).to.be.equal(1);
-        }).timeout(10000);
-
-        it('should update data', async () => {
-            const instanceId = `'update-data-test-${uuidv4()}`;
-            const setEvent = sinon.spy();
-            let data = { bla: 'bla' };
-            const watch = await etcd.discovery.watch({ instanceId });
-
-            watch.watcher.on('put', (d) => {
-                expect(JSON.parse(d.value.toString())).to.have.deep.keys(data);
-                data = { bla: 'bla2' };
-                setEvent();
-                _semaphore.callDone();
-                if (JSON.parse(d.value.toString()).bla === 'bla2') {
-                    return;
-                }
-                etcd.discovery.updateRegisteredData(data);
-            });
-            await etcd.discovery.register({
-                ttl: 4, instanceId, data
-            });
-
-            await _semaphore.done({ doneAmount: 2 });
-            watch.watcher.removeAllListeners();
-            expect(setEvent.callCount).to.be.equal(2);
-        }).timeout(10000);
     });
     describe('etcd set get', () => {
         it('etcd set and get simple test', async () => {
-            const instanceId = `'etcd-set-get-test-${uuidv4()}`;
+            const instanceId = `etcd-set-get-test-${uuidv4()}`;
             const data = { data: { bla: 'bla' } };
-            await etcd.services.set({ data, instanceId });
-            const etcdGet = await etcd.services.get({ instanceId, prefix: 'services' });
+            await etcd.services.client.set({ data, instanceId });
+            const etcdGet = await etcd.services.client.get({ instanceId, prefix: 'services' });
             expect(etcdGet.data).to.have.deep.keys(data.data);
         }).timeout(1000);
         it('etcd sort with limit', async () => {
-            const instanceId = `'etcd-set-get-test-${uuidv4()}`;
+            const instanceId = `etcd-set-get-test-${uuidv4()}`;
             for (let i = 0; i < 10; i++) {
-                await etcd.etcd3.put(`${instanceId}/${i}`, { val: `val${i}` }, null);
+                await etcd._client.put(`${instanceId}/${i}`, { val: `val${i}` }, null);
                 await delay(100);
             }
             await delay(200);
-            const data = await etcd.etcd3.getSortLimit(`${instanceId}`, ['Mod', 'Ascend'], 6);
+            const data = await etcd._client.getSortLimit(`${instanceId}`, ['Mod', 'Ascend'], 6);
             expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val0');
             expect(Object.keys(data).length).to.equal(6);
         });
@@ -142,15 +79,15 @@ describe('etcd', () => {
         describe('get/set', () => {
             it('should get without specific instanceId', async () => {
                 const data = { data: { bla: 'bla' } };
-                await etcd.services.set(data);
-                const etcdGet = await etcd.services.get({ prefix: 'services' });
+                await etcd.services.client.set(data);
+                const etcdGet = await etcd.services.client.get({ prefix: 'services' });
                 expect(etcdGet).to.have.deep.keys(data.data);
             }).timeout(10000);
             it('should get without specific instanceId with suffix', async () => {
                 const suffix = 'test';
                 const data = { data: { bla: 'bla' } };
-                await etcd.services.set({ data, suffix });
-                const etcdGet = await etcd.services.get({ prefix: 'services', suffix });
+                await etcd.services.client.set({ data, suffix });
+                const etcdGet = await etcd.services.client.get({ prefix: 'services', suffix });
                 expect(etcdGet.data).to.have.deep.keys(data.data);
             }).timeout(10000);
         });
@@ -413,7 +350,6 @@ describe('etcd', () => {
                 etcd.tasks.on('change', async (res) => {
                     const obj = { ...data, jobId, taskId };
                     expect(obj).to.have.deep.keys(res);
-                    etcd.tasks.unwatch();
                     _semaphore.callDone();
                 });
                 etcd.tasks.setState({
@@ -439,7 +375,7 @@ describe('etcd', () => {
                     await etcd.tasks.watch({ jobId, taskId });
                 }
                 catch (error) {
-                    expect(error.message).to.equals(`already watching ${JSON.stringify({ jobId, taskId })}`);
+                    expect(error.message).to.equals(`already watching on /jobs/${jobId}/tasks/${taskId}`);
                 }
             });
         });
@@ -518,7 +454,6 @@ describe('etcd', () => {
                 etcd.pipelines.on('change', (res) => {
                     console.log(res);
                     expect({ name, data }).to.have.deep.keys(res);
-                    etcd.pipelines.unwatch();
                     _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });
@@ -530,7 +465,6 @@ describe('etcd', () => {
                 await etcd.pipelines.watch();
                 etcd.pipelines.on('change', (res) => {
                     expect({ name, data }).to.have.deep.keys(res);
-                    etcd.pipelines.unwatch();
                     _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });

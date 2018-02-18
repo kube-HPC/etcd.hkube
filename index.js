@@ -1,1 +1,1 @@
-module.exports = require('./etcd-client');
+module.exports = require('./client');
