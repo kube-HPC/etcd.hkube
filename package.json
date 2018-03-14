@@ -13,8 +13,6 @@
   "dependencies": {
     "djsv": "^3.0.3",
     "etcd3": "^0.2.7",
-    "node-etcd": "^5.1.0",
-    "update": "^0.7.4",
     "uuid": "^3.1.0"
   },
   "devDependencies": {

@@ -1,9 +1,7 @@
 const { Etcd3 } = require('etcd3');
-const EventEmitter = require('events');
 
-class EtcdClient extends EventEmitter {
+class EtcdClient {
     constructor(options) {
-        super();
         this.client = new Etcd3(options);
         this._lease = null;
     }

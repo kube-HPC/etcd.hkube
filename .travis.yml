@@ -18,6 +18,8 @@ before_install:
   --listen-client-urls http://0.0.0.0:4001     --initial-cluster-state new
 install:
 - npm install
+- npm install -g snyk
+- snyk test 
 cache:
   directories:
   - node_modules
