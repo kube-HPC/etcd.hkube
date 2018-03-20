@@ -466,60 +466,60 @@ describe('etcd', () => {
             });
         });
     });
-    describe('QueueMetrics', () => {
+    describe('algorithmQueue', () => {
         describe('get/set', () => {
-            it('should get/set specific queueMetrics', async () => {
-                const options = { alg: 'green-alg', data: 'bla' };
-                await etcd.algorithms.queueMetrics.setState(options);
-                const etcdGet = await etcd.algorithms.queueMetrics.getState(options);
+            it('should get/set specific algorithmQueue', async () => {
+                const options = { queueName: 'green-alg', data: 'bla' };
+                await etcd.algorithms.algorithmQueue.setState(options);
+                const etcdGet = await etcd.algorithms.algorithmQueue.getState(options);
                 expect(etcdGet).to.equal(options.data);
             });
-            it('should get all queueMetrics', async () => {
-                const pipelines = await etcd.algorithms.queueMetrics.list();
+            it('should get all algorithmQueue', async () => {
+                const pipelines = await etcd.algorithms.algorithmQueue.list();
                 expect(pipelines).to.be.an('array');
             });
         });
         describe('watch', () => {
-            it('should watch specific queueMetrics', async () => {
-                const options = { alg: 'green-alg', data: 'bla' };
-                await etcd.algorithms.queueMetrics.watch(options);
-                etcd.algorithms.queueMetrics.on('change', (res) => {
+            it('should watch specific algorithmQueue', async () => {
+                const options = { queueName: 'green-alg', data: 'bla' };
+                await etcd.algorithms.algorithmQueue.watch(options);
+                etcd.algorithms.algorithmQueue.on('change', (res) => {
                     expect(res).to.deep.equal(options);
                     _semaphore.callDone();
                 });
-                await etcd.algorithms.queueMetrics.setState(options);
+                await etcd.algorithms.algorithmQueue.setState(options);
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
-                const options = { alg: 'blue-alg', data: 'bla' };
-                await etcd.algorithms.queueMetrics.setState(options);
-                const etcdGet = await etcd.algorithms.queueMetrics.watch(options);
+                const options = { queueName: 'blue-alg', data: 'bla' };
+                await etcd.algorithms.algorithmQueue.setState(options);
+                const etcdGet = await etcd.algorithms.algorithmQueue.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
-            it('should watch all queueMetrics', async () => {
+            it('should watch all algorithmQueue', async () => {
                 const options1 = {};
-                const options2 = { alg: 'yellow-alg', data: 'bla' };
-                await etcd.algorithms.queueMetrics.watch();
-                etcd.algorithms.queueMetrics.on('change', (res) => {
-                    if (res.alg === options2.alg) {
+                const options2 = { queueName: 'yellow-alg', data: 'bla' };
+                await etcd.algorithms.algorithmQueue.watch();
+                etcd.algorithms.algorithmQueue.on('change', (res) => {
+                    if (res.queueName === options2.queueName) {
                         expect(res).to.deep.equal(options2);
                         _semaphore.callDone();
                     }
                 });
-                await etcd.algorithms.queueMetrics.setState(options2);
+                await etcd.algorithms.algorithmQueue.setState(options2);
                 await _semaphore.done();
             });
         });
         describe('unwatch', () => {
-            it('should unwatch specific queueMetrics', async () => {
+            it('should unwatch specific algorithmQueue', async () => {
                 let isCalled = false;
-                const options = { alg: 'black-alg', data: 'bla' };
-                await etcd.algorithms.queueMetrics.watch(options);
-                etcd.algorithms.queueMetrics.on('change', (res) => {
+                const options = { queueName: 'black-alg', data: 'bla' };
+                await etcd.algorithms.algorithmQueue.watch(options);
+                etcd.algorithms.algorithmQueue.on('change', (res) => {
                     isCalled = true;
                 });
-                await etcd.algorithms.queueMetrics.unwatch(options);
-                await etcd.algorithms.queueMetrics.setState(options);
+                await etcd.algorithms.algorithmQueue.unwatch(options);
+                await etcd.algorithms.algorithmQueue.setState(options);
                 await delay(1000);
                 expect(isCalled).to.equal(false);
             });
