@@ -1,6 +1,7 @@
 
 const { expect } = require('chai');
 const Etcd = require('../index');
+const Discovery = require('../lib/discovery/discovery');
 const Watcher = require('../lib/watch/watcher');
 const Semaphore = require('await-done').semaphore;
 const sinon = require('sinon');
@@ -49,6 +50,80 @@ describe('etcd', () => {
             expect(expireEvent.callCount).to.be.equal(0);
             expect(deleteEvent.callCount).to.be.equal(0);
         }).timeout(5000);
+        it('should update data in discovery', async () => {
+            const instanceId = `register-test-${uuidv4()}`;
+            const discovery = new Discovery();
+            await discovery.init({
+                serviceName:'test-service',
+                instanceId,
+                client:etcd._client
+            })
+            await discovery.register({});
+            let expected = {foo:'bar'};
+            await discovery.updateRegisteredData(expected)
+            const path = `/discovery/test-service/${instanceId}`;
+            let actual = await etcd._client.get(path);
+            expect(JSON.parse(actual[path])).to.eql(expected);
+
+            expected = {foofoo:'barbar'};
+            await discovery.updateRegisteredData(expected)
+            actual = await etcd._client.get(path);
+            expect(JSON.parse(actual[path])).to.eql(expected);
+            
+        }).timeout(5000);
+        it('should get data from discovery with serviceName', async () => {
+            const instanceId = `register-test-${uuidv4()}`;
+            const discovery = new Discovery();
+            await discovery.init({
+                serviceName:'test-service',
+                instanceId,
+                client:etcd._client
+            })
+            await discovery.register({});
+            let expected = {foo:'bar'};
+            await discovery.updateRegisteredData(expected)
+            let actual = await discovery.get({
+                serviceName:'test-service',
+                prefix:'test-service',
+                instanceId
+            });
+            expect(actual).to.eql(expected);
+        });
+        it('should get data from discovery without serviceName', async () => {
+            const instanceId = `register-test-${uuidv4()}`;
+            const discovery = new Discovery();
+            await discovery.init({
+                serviceName:'test-service',
+                instanceId,
+                client:etcd._client
+            })
+            await discovery.register({});
+            let expected = {foo:'bar'};
+            await discovery.updateRegisteredData(expected)
+            let actual = await discovery.get({
+                prefix:'test-service',
+                instanceId
+            });
+            expect(actual).to.eql(expected);
+        });
+        it('should get data from discovery with wrong serviceName', async () => {
+            const instanceId = `register-test-${uuidv4()}`;
+            const discovery = new Discovery();
+            await discovery.init({
+                serviceName:'test-service',
+                instanceId,
+                client:etcd._client
+            })
+            await discovery.register({});
+            let expected = {foo:'bar'};
+            await discovery.updateRegisteredData(expected)
+            let actual = await discovery.get({
+                serviceName:'test-service-wrong',
+                prefix:'test-service',
+                instanceId
+            });
+            expect(actual).to.be.null;
+        });
     });
     describe('Get/Set', () => {
         it('etcd set and get simple test', async () => {
