@@ -26,7 +26,16 @@ class Client {
         this.algorithms.resourceRequirements = new ResourceRequirements();
         this.algorithms.templatesStore = new TemplatesStore();
     }
-
+    
+    // //etcd watch events 
+    // on(event: "connecting", handlr: function): this
+    // on(event: "connected", handler: function): this
+    // on(event: "data", handler: function): this
+    // on(event: "put", handler: function): this
+    // on(event: "delete", handler: function): this
+    // on(event: "end", handler: function): this
+    // // on(event: "disconnected", handler: function): this
+    // on(event: "error", handler: function): this
     /**
      * init data for starting
      * @param {object} options 
@@ -64,5 +73,6 @@ class Client {
         throw new Error(initSchemaConfig.error);
     }
 }
+
 
 module.exports = Client;
