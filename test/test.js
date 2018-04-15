@@ -121,7 +121,7 @@ describe('etcd', () => {
             const etcd2 = new Etcd();
             await etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
             const instanceId2 = `register-test-${uuidv4()}`;
-            
+
             const discovery2 = new Discovery();
             await discovery2.init({
                 serviceName: 'test-service',
@@ -565,7 +565,7 @@ describe('etcd', () => {
             });
         });
         describe('watch', () => {
-            it('should watch specific pipeline', async () => {
+            it('should watch set specific pipeline', async () => {
                 const name = 'pipeline-2';
                 const data = { bla: 'bla' };
                 await etcd.pipelines.watch({ name });
@@ -574,6 +574,18 @@ describe('etcd', () => {
                     _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });
+                await _semaphore.done();
+            });
+            it('should watch delete specific pipeline', async () => {
+                const name = 'pipeline-2';
+                const data = { bla: 'bla' };
+                await etcd.pipelines.watch({ name });
+                etcd.pipelines.on('delete', (res) => {
+                    expect({ name }).to.have.deep.keys(res);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelines.setPipeline({ name, data });
+                await etcd.pipelines.deletePipeline({ name });
                 await _semaphore.done();
             });
             it('should watch all pipelines', async () => {
