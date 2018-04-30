@@ -59,7 +59,7 @@ class Client {
                 serviceName: options.serviceName,
                 instanceId: options.instanceId,
                 client: this._client
-            }
+            };
             this.discovery.init(data);
             this.services.init(data);
             this.jobs.init(data);
