@@ -7,6 +7,7 @@ const JobResults = require('./lib/jobResults/jobResults');
 const Tasks = require('./lib/tasks/tasks');
 const Pipelines = require('./lib/pipelines/pipelines');
 const Execution = require('./lib/execution/execution');
+const Workers = require('./lib/workers/workers');
 const { AlgorithmQueue, ResourceRequirements, TemplatesStore } = require('./lib/algorithms/index');
 const { initSchema } = require('./lib/schema');
 
@@ -21,6 +22,7 @@ class Client {
         this.tasks = new Tasks();
         this.pipelines = new Pipelines();
         this.execution = new Execution();
+        this.workers = new Workers();
         this.algorithms = {};
         this.algorithms.algorithmQueue = new AlgorithmQueue();
         this.algorithms.resourceRequirements = new ResourceRequirements();
@@ -63,6 +65,7 @@ class Client {
             this.jobs.init(data);
             this.jobResults.init(data);
             this.tasks.init(data);
+            this.workers.init(data);
             this.pipelines.init(data);
             this.execution.init(data);
             this.algorithms.algorithmQueue.init(data);

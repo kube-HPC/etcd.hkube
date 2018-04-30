@@ -57,19 +57,18 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId,
                 client: etcd._client
-            })
+            });
             await discovery.register({});
             let expected = { foo: 'bar' };
-            await discovery.updateRegisteredData(expected)
+            await discovery.updateRegisteredData(expected);
             const path = `/discovery/test-service/${instanceId}`;
             let actual = await etcd._client.get(path);
             expect(JSON.parse(actual[path])).to.eql(expected);
 
             expected = { foofoo: 'barbar' };
-            await discovery.updateRegisteredData(expected)
+            await discovery.updateRegisteredData(expected);
             actual = await etcd._client.get(path);
             expect(JSON.parse(actual[path])).to.eql(expected);
-
         }).timeout(5000);
         it('should get data from discovery with serviceName', async () => {
             const instanceId = `register-test-${uuidv4()}`;
@@ -78,11 +77,11 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId,
                 client: etcd._client
-            })
+            });
             await discovery.register({});
-            let expected = { foo: 'bar' };
-            await discovery.updateRegisteredData(expected)
-            let actual = await discovery.get({
+            const expected = { foo: 'bar' };
+            await discovery.updateRegisteredData(expected);
+            const actual = await discovery.get({
                 serviceName: 'test-service',
                 prefix: 'test-service',
                 instanceId
@@ -96,15 +95,15 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId,
                 client: etcd._client
-            })
+            });
             await discovery.register({});
-            let expected = { foo: 'bar' };
-            await discovery.updateRegisteredData(expected)
+            const expected = { foo: 'bar' };
+            await discovery.updateRegisteredData(expected);
 
-            let actual = await discovery.get({
+            const actual = await discovery.get({
                 serviceName: 'test-service'
             });
-            expect(actual).deep.include({ [`/discovery/test-service/${instanceId}`]: expected })
+            expect(actual).deep.include({ [`/discovery/test-service/${instanceId}`]: expected });
         });
         it('should get prefix data from discovery with serviceName - multiple results', async () => {
             const instanceId = `register-test-${uuidv4()}`;
@@ -113,10 +112,10 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId,
                 client: etcd._client
-            })
+            });
             await discovery.register({});
-            let expected = { foo: 'bar' };
-            await discovery.updateRegisteredData(expected)
+            const expected = { foo: 'bar' };
+            await discovery.updateRegisteredData(expected);
 
             const etcd2 = new Etcd();
             await etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
@@ -127,15 +126,15 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId: instanceId2,
                 client: etcd2._client
-            })
+            });
             await discovery2.register({});
-            await discovery2.updateRegisteredData({ foo: 'baz' })
+            await discovery2.updateRegisteredData({ foo: 'baz' });
 
-            let actual = await discovery.get({
+            const actual = await discovery.get({
                 serviceName: 'test-service'
             });
-            expect(actual).deep.include({ [`/discovery/test-service/${instanceId}`]: expected })
-            expect(actual).deep.include({ [`/discovery/test-service/${instanceId2}`]: { foo: 'baz' } })
+            expect(actual).deep.include({ [`/discovery/test-service/${instanceId}`]: expected });
+            expect(actual).deep.include({ [`/discovery/test-service/${instanceId2}`]: { foo: 'baz' } });
         });
         it('should get data from discovery without serviceName', async () => {
             const instanceId = `register-test-${uuidv4()}`;
@@ -144,11 +143,11 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId,
                 client: etcd._client
-            })
+            });
             await discovery.register({});
-            let expected = { foo: 'bar' };
-            await discovery.updateRegisteredData(expected)
-            let actual = await discovery.get({
+            const expected = { foo: 'bar' };
+            await discovery.updateRegisteredData(expected);
+            const actual = await discovery.get({
                 prefix: 'test-service',
                 instanceId
             });
@@ -161,11 +160,11 @@ describe('etcd', () => {
                 serviceName: 'test-service',
                 instanceId,
                 client: etcd._client
-            })
+            });
             await discovery.register({});
-            let expected = { foo: 'bar' };
-            await discovery.updateRegisteredData(expected)
-            let actual = await discovery.get({
+            const expected = { foo: 'bar' };
+            await discovery.updateRegisteredData(expected);
+            const actual = await discovery.get({
                 serviceName: 'test-service-wrong',
                 prefix: 'test-service',
                 instanceId
@@ -406,6 +405,59 @@ describe('etcd', () => {
                 etcd.jobResults.setStatus({ state, jobId });
                 await delay(1000);
                 expect(isCalled).to.equal(false);
+            });
+        });
+    });
+
+    describe('Workers', () => {
+        describe('set', () => {
+            it('should set status', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.setState({ workerId, status });
+                const actual = await etcd.workers.getState({ workerId });
+                expect(actual).to.eql({ status });
+            });
+            it('should set error', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const error = { code: 'blah' };
+                await etcd.workers.setState({ workerId, error });
+                const actual = await etcd.workers.getState({ workerId });
+                expect(actual).to.eql({ error });
+            });
+        });
+        describe('watch', () => {
+            it('should watch key', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.watch({ workerId });
+                etcd.workers.on('change', async (res) => {
+                    expect(res).to.eql({ status, workerId });
+                    await etcd.workers.unwatch({ workerId });
+                    _semaphore.callDone();
+                });
+                await etcd.workers.setState({ workerId, status });
+                await _semaphore.done();
+            });
+            it('should return the set obj on watch', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.setState({ workerId, status });
+                const actual = await etcd.workers.watch({ workerId });
+                expect(actual).to.eql({ status });
+                await etcd.workers.unwatch({ workerId });
+            });
+            it('should throw error if watch on worker already exists', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                await etcd.workers.watch({ workerId });
+                try {
+                    await etcd.workers.watch({ workerId });
+                }
+                catch (error) {
+                    expect(error.message).to.equals(`already watching on /workers/${workerId}`);
+                    _semaphore.callDone();
+                }
+                await _semaphore.done();
             });
         });
     });
