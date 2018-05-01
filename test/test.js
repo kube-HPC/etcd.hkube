@@ -1,7 +1,7 @@
-
 const { expect } = require('chai');
 const Etcd = require('../index');
 const Discovery = require('../lib/discovery/discovery');
+const triggersTreeExpected = require('./mocks/triggers-tree.json');
 const Watcher = require('../lib/watch/watcher');
 const Semaphore = require('await-done').semaphore;
 const sinon = require('sinon');
@@ -589,6 +589,26 @@ describe('etcd', () => {
                 await etcd.execution.setExecution({ jobId: jobID, data: pipeline });
                 const etcdGet = await etcd.execution.getExecution({ jobId: jobID });
                 expect(pipeline).to.have.deep.keys(etcdGet);
+            });
+            it('should get executions tree', async () => {
+                const prefix = '57ec5c39-122b-4d7c-bc8f-580ba30df511';
+                await Promise.all([
+                    etcd.execution.setExecution({ jobId: prefix + '.a', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.e', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.e.f', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.g', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.h', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.i', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.h.j.k.l', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.h.j.k.o', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.h.j.k.p', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.b.m', data: { startTime: Date.now() } }),
+                    etcd.execution.setExecution({ jobId: prefix + '.a.n', data: { startTime: Date.now() } })
+                ]);
+                const result = await etcd.execution.getExecutionsTree({ jobId: prefix + '.a' });
+                expect(result).to.deep.equal(triggersTreeExpected);
             });
         });
     });
