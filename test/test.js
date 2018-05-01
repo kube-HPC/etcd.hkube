@@ -1,4 +1,3 @@
-
 const { expect } = require('chai');
 const Etcd = require('../index');
 const Discovery = require('../lib/discovery/discovery');
@@ -593,7 +592,7 @@ describe('etcd', () => {
             });
             it('should get executions tree', async () => {
                 const prefix = '57ec5c39-122b-4d7c-bc8f-580ba30df511';
-                await Promise.all[
+                await Promise.all([
                     etcd.execution.setExecution({ jobId: prefix + '.a', data: { startTime: Date.now() } }),
                     etcd.execution.setExecution({ jobId: prefix + '.a.b.c', data: { startTime: Date.now() } }),
                     etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d', data: { startTime: Date.now() } }),
@@ -607,8 +606,7 @@ describe('etcd', () => {
                     etcd.execution.setExecution({ jobId: prefix + '.a.b.c.d.h.j.k.p', data: { startTime: Date.now() } }),
                     etcd.execution.setExecution({ jobId: prefix + '.a.b.m', data: { startTime: Date.now() } }),
                     etcd.execution.setExecution({ jobId: prefix + '.a.n', data: { startTime: Date.now() } })
-                ];
-
+                ]);
                 const result = await etcd.execution.getExecutionsTree({ jobId: prefix + '.a' });
                 expect(result).to.deep.equal(triggersTreeExpected);
             });
