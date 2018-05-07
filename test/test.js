@@ -802,6 +802,15 @@ describe('etcd', () => {
                 expect(pipelines).to.be.an('array');
             });
         });
+        describe('delete', () => {
+            it('should delete specific templatesStore', async () => {
+                const options = { name: 'delete-alg', data: 'bla' };
+                await etcd.algorithms.templatesStore.setAlgorithm(options);
+                const deleteRes = await etcd.algorithms.templatesStore.deleteAlgorithm(options);
+                const getRes = await etcd.algorithms.templatesStore.getAlgorithm(options);
+                expect(getRes).to.be.null;
+            });
+        });
         describe('watch', () => {
             it('should watch specific templatesStore', async () => {
                 const options = { name: 'green-alg', data: 'bla' };
