@@ -762,7 +762,6 @@ describe('etcd', () => {
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all resourceRequirements', async () => {
-                const options1 = {};
                 const options2 = { alg: 'yellow-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.watch();
                 etcd.algorithms.resourceRequirements.on('change', (res) => {
@@ -793,7 +792,7 @@ describe('etcd', () => {
     describe('TemplatesStore', () => {
         describe('get/set', () => {
             it('should get/set specific templatesStore', async () => {
-                const options = { alg: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.algorithms.templatesStore.setAlgorithm(options);
                 const etcdGet = await etcd.algorithms.templatesStore.getAlgorithm(options);
                 expect(etcdGet).to.equal(options.data);
@@ -805,7 +804,7 @@ describe('etcd', () => {
         });
         describe('watch', () => {
             it('should watch specific templatesStore', async () => {
-                const options = { alg: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.algorithms.templatesStore.watch(options);
                 etcd.algorithms.templatesStore.on('change', (res) => {
                     expect(res).to.deep.equal(options);
@@ -815,17 +814,16 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
-                const options = { alg: 'blue-alg', data: 'bla' };
+                const options = { name: 'blue-alg', data: 'bla' };
                 await etcd.algorithms.templatesStore.setAlgorithm(options);
                 const etcdGet = await etcd.algorithms.templatesStore.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all templatesStore', async () => {
-                const options1 = {};
-                const options2 = { alg: 'yellow-alg', data: 'bla' };
+                const options2 = { name: 'yellow-alg', data: 'bla' };
                 await etcd.algorithms.templatesStore.watch();
                 etcd.algorithms.templatesStore.on('change', (res) => {
-                    if (res.alg === options2.alg) {
+                    if (res.name === options2.name) {
                         expect(res).to.deep.equal(options2);
                         _semaphore.callDone();
                     }
@@ -837,7 +835,7 @@ describe('etcd', () => {
         describe('unwatch', () => {
             it('should unwatch specific templatesStore', async () => {
                 let isCalled = false;
-                const options = { alg: 'black-alg', data: 'bla' };
+                const options = { name: 'black-alg', data: 'bla' };
                 await etcd.algorithms.templatesStore.watch(options);
                 etcd.algorithms.templatesStore.on('change', (res) => {
                     isCalled = true;
