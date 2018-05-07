@@ -408,7 +408,6 @@ describe('etcd', () => {
             });
         });
     });
-
     describe('Workers', () => {
         describe('set', () => {
             it('should set status', async () => {
@@ -622,7 +621,7 @@ describe('etcd', () => {
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('should get all pipelines', async () => {
-                const pipelines = await etcd.pipelines.getPipelines();
+                const pipelines = await etcd.pipelines.list();
                 expect(pipelines).to.be.an('array');
             });
         });
@@ -795,8 +794,8 @@ describe('etcd', () => {
         describe('get/set', () => {
             it('should get/set specific templatesStore', async () => {
                 const options = { alg: 'green-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.setState(options);
-                const etcdGet = await etcd.algorithms.templatesStore.getState(options);
+                await etcd.algorithms.templatesStore.setAlgorithm(options);
+                const etcdGet = await etcd.algorithms.templatesStore.getAlgorithm(options);
                 expect(etcdGet).to.equal(options.data);
             });
             it('should get all templatesStore', async () => {
@@ -812,12 +811,12 @@ describe('etcd', () => {
                     expect(res).to.deep.equal(options);
                     _semaphore.callDone();
                 });
-                await etcd.algorithms.templatesStore.setState(options);
+                await etcd.algorithms.templatesStore.setAlgorithm(options);
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
                 const options = { alg: 'blue-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.setState(options);
+                await etcd.algorithms.templatesStore.setAlgorithm(options);
                 const etcdGet = await etcd.algorithms.templatesStore.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
@@ -831,7 +830,7 @@ describe('etcd', () => {
                         _semaphore.callDone();
                     }
                 });
-                await etcd.algorithms.templatesStore.setState(options2);
+                await etcd.algorithms.templatesStore.setAlgorithm(options2);
                 await _semaphore.done();
             });
         });
@@ -844,7 +843,7 @@ describe('etcd', () => {
                     isCalled = true;
                 });
                 await etcd.algorithms.templatesStore.unwatch(options);
-                await etcd.algorithms.templatesStore.setState(options);
+                await etcd.algorithms.templatesStore.setAlgorithm(options);
                 await delay(1000);
                 expect(isCalled).to.equal(false);
             });
