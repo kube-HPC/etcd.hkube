@@ -678,7 +678,7 @@ describe('etcd', () => {
                 const options = { queueName: 'green-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.setState(options);
                 const etcdGet = await etcd.algorithms.algorithmQueue.getState(options);
-                expect(etcdGet).to.equal(options.data);
+                expect(etcdGet).to.deep.equal(options);
             });
             it('should get all algorithmQueue', async () => {
                 const pipelines = await etcd.algorithms.algorithmQueue.list();
@@ -703,7 +703,6 @@ describe('etcd', () => {
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all algorithmQueue', async () => {
-                const options1 = {};
                 const options2 = { queueName: 'yellow-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.watch();
                 etcd.algorithms.algorithmQueue.on('change', (res) => {
