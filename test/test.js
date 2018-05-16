@@ -638,10 +638,10 @@ describe('etcd', () => {
         describe('watch', () => {
             it('should watch set specific pipeline', async () => {
                 const name = 'pipeline-2';
-                const data = { bla: 'bla' };
+                const data = { name, bla: 'bla' };
                 await etcd.pipelines.watch({ name });
                 etcd.pipelines.on('change', (res) => {
-                    expect({ name, data }).to.have.deep.keys(res);
+                    expect(data).to.have.deep.keys(res);
                     _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });
@@ -649,7 +649,7 @@ describe('etcd', () => {
             });
             it('should watch delete specific pipeline', async () => {
                 const name = 'pipeline-2';
-                const data = { bla: 'bla' };
+                const data = { name, bla: 'bla' };
                 await etcd.pipelines.watch({ name });
                 etcd.pipelines.on('delete', (res) => {
                     expect({ name }).to.have.deep.keys(res);
@@ -661,10 +661,10 @@ describe('etcd', () => {
             });
             it('should watch all pipelines', async () => {
                 const name = 'pipeline-3';
-                const data = { bla: 'bla' };
+                const data = { name, bla: 'bla' };
                 await etcd.pipelines.watch();
                 etcd.pipelines.on('change', (res) => {
-                    expect({ name, data }).to.have.deep.keys(res);
+                    expect(data).to.have.deep.keys(res);
                     _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });
