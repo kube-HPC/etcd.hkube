@@ -28,7 +28,7 @@ class EtcdClient {
     }
 
     async watch(path) {
-        return this.client.watch().prefix(path).create();
+        return this.client.watch().prefix(path).withPreviousKV().create();
     }
 
     async register(ttl, path, value) {

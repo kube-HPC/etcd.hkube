@@ -4,8 +4,8 @@
   "description": "etcd infrastructure build for the hkube project",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test --colors --recursive --exit",
-    "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec test --exit",
+    "test": "mocha tests --colors --recursive --exit",
+    "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec tests --exit",
     "build": "npm publish"
   },
   "author": "maty zisserman",

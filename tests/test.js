@@ -652,7 +652,7 @@ describe('etcd', () => {
                 const data = { name, bla: 'bla' };
                 await etcd.pipelines.watch({ name });
                 etcd.pipelines.on('delete', (res) => {
-                    expect({ name }).to.have.deep.keys(res);
+                    expect(data).to.have.deep.keys(res);
                     _semaphore.callDone();
                 });
                 await etcd.pipelines.setPipeline({ name, data });
