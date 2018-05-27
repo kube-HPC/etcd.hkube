@@ -4,6 +4,8 @@ const Discovery = require('./lib/discovery/discovery');
 const Services = require('./lib/services/services');
 const Jobs = require('./lib/jobs/jobs');
 const JobResults = require('./lib/jobResults/jobResults');
+const JobStatus = require('./lib/jobStatus/jobStatus');
+const Webhooks = require('./lib/webhooks/webhooks');
 const Tasks = require('./lib/tasks/tasks');
 const Pipelines = require('./lib/pipelines/pipelines');
 const Execution = require('./lib/execution/execution');
@@ -19,6 +21,8 @@ class Client {
         this.services = new Services();
         this.jobs = new Jobs();
         this.jobResults = new JobResults();
+        this.jobStatus = new JobStatus();
+        this.webhooks = new Webhooks();
         this.tasks = new Tasks();
         this.pipelines = new Pipelines();
         this.execution = new Execution();
@@ -28,16 +32,7 @@ class Client {
         this.algorithms.resourceRequirements = new ResourceRequirements();
         this.algorithms.templatesStore = new TemplatesStore();
     }
-    
-    // //etcd watch events 
-    // on(event: "connecting", handlr: function): this
-    // on(event: "connected", handler: function): this
-    // on(event: "data", handler: function): this
-    // on(event: "put", handler: function): this
-    // on(event: "delete", handler: function): this
-    // on(event: "end", handler: function): this
-    // // on(event: "disconnected", handler: function): this
-    // on(event: "error", handler: function): this
+
     /**
      * init data for starting
      * @param {object} options 
@@ -64,6 +59,8 @@ class Client {
             this.services.init(data);
             this.jobs.init(data);
             this.jobResults.init(data);
+            this.jobStatus.init(data);
+            this.webhooks.init(data);
             this.tasks.init(data);
             this.workers.init(data);
             this.pipelines.init(data);
@@ -76,6 +73,5 @@ class Client {
         throw new Error(initSchemaConfig.error);
     }
 }
-
 
 module.exports = Client;

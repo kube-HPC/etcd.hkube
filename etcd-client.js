@@ -1,4 +1,6 @@
 const { Etcd3 } = require('etcd3');
+const jsonHelper = require('./lib/helper/json');
+const queryHelper = require('./lib/helper/query');
 
 class EtcdClient {
     constructor(options) {
@@ -28,7 +30,7 @@ class EtcdClient {
     }
 
     async watch(path) {
-        return this.client.watch().prefix(path).withPreviousKV().create();
+        return this.client.watch().prefix(path).create();
     }
 
     async register(ttl, path, value) {
@@ -60,6 +62,18 @@ class EtcdClient {
 
     async put(path, value) {
         return this.client.put(path).value(JSON.stringify(value));
+    }
+
+    async getByQuery(path, options) {
+        const results = [];
+        const { order, sort, limit } = queryHelper.parse(options);
+        const list = await this.getSortLimit(path, [order, sort], limit);
+        Object.entries(list).forEach(([k, v]) => {
+            const [, , key] = k.split('/');
+            const value = jsonHelper.tryParseJSON(v);
+            results.push({ key, value });
+        });
+        return results;
     }
 
     // sort(target: "Key" | "Version" | "Create" | "Mod" | "Value", order: "None" | "Ascend" | "Descend"):
