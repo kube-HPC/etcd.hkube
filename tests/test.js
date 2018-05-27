@@ -561,8 +561,8 @@ describe('etcd', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ jobId, state, type });
-                await etcd.webhooks.set(webhook);
+                const webhook = new Webhook({ state, type });
+                await etcd.webhooks.set({ jobId, data: webhook });
                 const result = await etcd.webhooks.get({ jobId });
                 expect(result).to.have.property('timestamp');
                 expect(result).to.have.property('jobId');
@@ -573,8 +573,8 @@ describe('etcd', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ jobId, state, type });
-                await etcd.webhooks.set(webhook);
+                const webhook = new Webhook({ state, type });
+                await etcd.webhooks.set({ jobId, data: webhook });
                 await etcd.webhooks.delete({ jobId });
                 const result = await etcd.webhooks.get({ jobId });
                 expect(result).to.be.null;
@@ -585,11 +585,11 @@ describe('etcd', () => {
                 const order = 'Mod';
                 const sort = 'asc';
                 const limit = 3;
-                await etcd.webhooks.set(new Webhook({ jobId: 'jobs-1', state, type }));
-                await etcd.webhooks.set(new Webhook({ jobId: 'jobs-2', state, type }));
-                await etcd.webhooks.set(new Webhook({ jobId: 'jobs-3', state, type }));
-                await etcd.webhooks.set(new Webhook({ jobId: 'jobs-4', state, type }));
-                await etcd.webhooks.set(new Webhook({ jobId: 'jobs-5', state, type }));
+                await etcd.webhooks.set({ jobId: 'jobs-1', data: new Webhook({ state, type }) });
+                await etcd.webhooks.set({ jobId: 'jobs-2', data: new Webhook({ state, type }) });
+                await etcd.webhooks.set({ jobId: 'jobs-3', data: new Webhook({ state, type }) });
+                await etcd.webhooks.set({ jobId: 'jobs-4', data: new Webhook({ state, type }) });
+                await etcd.webhooks.set({ jobId: 'jobs-5', data: new Webhook({ state, type }) });
                 const list = await etcd.webhooks.list({ jobId: 'jobs', order, sort, limit });
                 expect(list).to.have.lengthOf(3);
             });
@@ -599,8 +599,8 @@ describe('etcd', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ jobId, state, type });
-                await etcd.webhooks.watch(webhook);
+                const webhook = new Webhook({ state, type });
+                await etcd.webhooks.watch({ jobId });
                 etcd.webhooks.on('change', (result) => {
                     expect(result).to.have.property('timestamp');
                     expect(result).to.have.property('jobId');
@@ -608,15 +608,15 @@ describe('etcd', () => {
                     expect(result).to.have.property('type');
                     _semaphore.callDone();
                 });
-                etcd.webhooks.set(webhook);
+                etcd.webhooks.set({ jobId, data: webhook });
                 await _semaphore.done();
             });
             it('should watch webhook progress', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'pending';
                 const type = 'progress';
-                const webhook = new Webhook({ jobId, state, type });
-                await etcd.webhooks.watch(webhook);
+                const webhook = new Webhook({ state, type });
+                await etcd.webhooks.watch({ jobId });
                 etcd.webhooks.on('change', (result) => {
                     expect(result).to.have.property('timestamp');
                     expect(result).to.have.property('jobId');
@@ -624,7 +624,7 @@ describe('etcd', () => {
                     expect(result).to.have.property('type');
                     _semaphore.callDone();
                 });
-                etcd.webhooks.set(webhook);
+                etcd.webhooks.set({ jobId, data: webhook });
                 await _semaphore.done();
             });
         });
@@ -634,13 +634,13 @@ describe('etcd', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ jobId, state, type });
-                await etcd.webhooks.watch(webhook);
+                const webhook = new Webhook({ state, type });
+                await etcd.webhooks.watch({ jobId });
                 etcd.webhooks.on('change', () => {
                     isCalled = true;
                 });
-                await etcd.webhooks.unwatch(webhook);
-                await etcd.webhooks.set(webhook);
+                await etcd.webhooks.unwatch({ jobId });
+                await etcd.webhooks.set({ jobId, data: webhook });
                 await delay(1000);
                 expect(isCalled).to.equal(false);
             });
