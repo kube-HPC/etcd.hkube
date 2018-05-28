@@ -69,9 +69,9 @@ class EtcdClient {
         const { order, sort, limit } = queryHelper.parse(options);
         const list = await this.getSortLimit(path, [order, sort], limit);
         Object.entries(list).forEach(([k, v]) => {
-            const [, , key] = k.split('/');
+            const [, , key, key2] = k.split('/');
             const value = jsonHelper.tryParseJSON(v);
-            results.push({ key, value });
+            results.push({ key, key2, value });
         });
         return results;
     }

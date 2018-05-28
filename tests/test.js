@@ -559,88 +559,82 @@ describe('etcd', () => {
         describe('crud', () => {
             it('should set and get webhook', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const state = 'pending';
+                const pipelineStatus = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ state, type });
-                await etcd.webhooks.set({ jobId, data: webhook });
-                const result = await etcd.webhooks.get({ jobId });
+                await etcd.webhooks.set({ jobId, type, data: new Webhook({ pipelineStatus }) });
+                const result = await etcd.webhooks.get({ jobId, type });
                 expect(result).to.have.property('timestamp');
                 expect(result).to.have.property('jobId');
-                expect(result).to.have.property('state');
-                expect(result).to.have.property('type');
+                expect(result).to.have.property('pipelineStatus');
             });
             it('should delete specific webhook', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const state = 'pending';
+                const pipelineStatus = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ state, type });
-                await etcd.webhooks.set({ jobId, data: webhook });
-                await etcd.webhooks.delete({ jobId });
+                await etcd.webhooks.set({ jobId, type, data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.delete({ jobId, type });
                 const result = await etcd.webhooks.get({ jobId });
                 expect(result).to.be.null;
             });
             it('should set and get webhook list', async () => {
-                const state = 'pending';
-                const type = 'results';
+                const pipelineStatus = 'pending';
                 const order = 'Mod';
                 const sort = 'asc';
                 const limit = 3;
-                await etcd.webhooks.set({ jobId: 'jobs-1', data: new Webhook({ state, type }) });
-                await etcd.webhooks.set({ jobId: 'jobs-2', data: new Webhook({ state, type }) });
-                await etcd.webhooks.set({ jobId: 'jobs-3', data: new Webhook({ state, type }) });
-                await etcd.webhooks.set({ jobId: 'jobs-4', data: new Webhook({ state, type }) });
-                await etcd.webhooks.set({ jobId: 'jobs-5', data: new Webhook({ state, type }) });
-                const list = await etcd.webhooks.list({ jobId: 'jobs', order, sort, limit });
+                await etcd.webhooks.set({ jobId: 'jobs-list-1', type: 'results', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: 'jobs-list-2', type: 'progress', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: 'jobs-list-3', type: 'error', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: 'jobs-list-4', type: 'step', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: 'jobs-list-5', type: 'bla', data: new Webhook({ pipelineStatus }) });
+                const list = await etcd.webhooks.list({ jobId: 'jobs-list', order, sort, limit });
                 expect(list).to.have.lengthOf(3);
             });
         });
         describe('watch', () => {
             it('should watch webhook results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const state = 'pending';
+                const pipelineStatus = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ state, type });
+                const webhook = new Webhook({ pipelineStatus });
                 await etcd.webhooks.watch({ jobId });
-                etcd.webhooks.on('change', (result) => {
+                etcd.webhooks.on('results-change', (result) => {
                     expect(result).to.have.property('timestamp');
                     expect(result).to.have.property('jobId');
-                    expect(result).to.have.property('state');
-                    expect(result).to.have.property('type');
+                    expect(result).to.have.property('pipelineStatus');
                     _semaphore.callDone();
                 });
-                etcd.webhooks.set({ jobId, data: webhook });
+                etcd.webhooks.set({ jobId, type, data: webhook });
                 await _semaphore.done();
             });
             it('should watch webhook progress', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const state = 'pending';
+                const pipelineStatus = 'pending';
                 const type = 'progress';
-                const webhook = new Webhook({ state, type });
+                const webhook = new Webhook({ pipelineStatus });
                 await etcd.webhooks.watch({ jobId });
-                etcd.webhooks.on('change', (result) => {
+                etcd.webhooks.on('progress-change', (result) => {
                     expect(result).to.have.property('timestamp');
                     expect(result).to.have.property('jobId');
-                    expect(result).to.have.property('state');
-                    expect(result).to.have.property('type');
+                    expect(result).to.have.property('pipelineStatus');
                     _semaphore.callDone();
                 });
-                etcd.webhooks.set({ jobId, data: webhook });
+                etcd.webhooks.set({ jobId, type, data: webhook });
                 await _semaphore.done();
             });
         });
         describe('unwatch', () => {
-            it('should unwatch stateChanged', async () => {
+            it('should unwatch webhook results', async () => {
                 let isCalled = false;
                 const jobId = `jobid-${uuidv4()}`;
-                const state = 'pending';
+                const pipelineStatus = 'pending';
                 const type = 'results';
-                const webhook = new Webhook({ state, type });
+                const webhook = new Webhook({ pipelineStatus });
                 await etcd.webhooks.watch({ jobId });
-                etcd.webhooks.on('change', () => {
+                etcd.webhooks.on('results-change', () => {
                     isCalled = true;
                 });
                 await etcd.webhooks.unwatch({ jobId });
-                await etcd.webhooks.set({ jobId, data: webhook });
+                await etcd.webhooks.set({ jobId, type, data: webhook });
                 await delay(1000);
                 expect(isCalled).to.equal(false);
             });
