@@ -161,7 +161,7 @@ describe('etcd', () => {
                 });
                 await etcd.discovery.unwatch();
                 await etcd.discovery.register({});
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -350,7 +350,7 @@ describe('etcd', () => {
                 });
                 await etcd.jobs.unwatch({ jobId });
                 etcd.jobs.setState({ state, jobId });
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -450,7 +450,7 @@ describe('etcd', () => {
                 });
                 await etcd.jobResults.unwatch({ jobId });
                 etcd.jobResults.set({ state, jobId });
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -550,7 +550,7 @@ describe('etcd', () => {
                 });
                 await etcd.jobStatus.unwatch({ jobId });
                 etcd.jobStatus.set({ state, jobId });
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -635,7 +635,7 @@ describe('etcd', () => {
                 });
                 await etcd.webhooks.unwatch({ jobId });
                 await etcd.webhooks.set({ jobId, type, data: webhook });
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -885,7 +885,7 @@ describe('etcd', () => {
                 });
                 const res = await etcd.execution.unwatch({ jobId });
                 etcd.execution.set({ state, jobId });
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -1029,7 +1029,7 @@ describe('etcd', () => {
                 });
                 await etcd.algorithms.algorithmQueue.unwatch(options);
                 await etcd.algorithms.algorithmQueue.set(options);
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -1108,7 +1108,165 @@ describe('etcd', () => {
                 });
                 await etcd.algorithms.resourceRequirements.unwatch(options);
                 await etcd.algorithms.resourceRequirements.set(options);
-                await delay(1000);
+                await delay(500);
+                expect(isCalled).to.equal(false);
+            });
+        });
+    });
+    describe('PipelineDriverRequirements', () => {
+        describe('crud', () => {
+            it('should get/set specific resourceRequirement', async () => {
+                const options = { queueName: 'green-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
+                expect(etcdGet).to.equal(options.data);
+            });
+            it('should delete specific resourceRequirement', async () => {
+                const options = { queueName: 'delete-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                await etcd.pipelineDrivers.resourceRequirements.delete(options);
+                const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
+                expect(etcdGet).to.be.null;
+            });
+            it('should get all resourceRequirements', async () => {
+                const options1 = { queueName: 'list-1-alg', data: 'bla' };
+                const options2 = { queueName: 'list-2-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.set(options1);
+                await etcd.pipelineDrivers.resourceRequirements.set(options2);
+                const list = await etcd.pipelineDrivers.resourceRequirements.list({ queueName: 'list' });
+                expect(list).to.have.lengthOf(2);
+            });
+        });
+        describe('watch', () => {
+            it('should watch change resourceRequirements', async () => {
+                const options = { queueName: 'green-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
+                    expect(res).to.deep.equal(options);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                await _semaphore.done();
+            });
+            it('should watch delete resourceRequirements', async () => {
+                const options = { queueName: 'delete-green-alg' };
+                await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                etcd.pipelineDrivers.resourceRequirements.on('delete', (res) => {
+                    expect(res).to.deep.equal({ queueName: 'delete-green-alg' });
+                    _semaphore.callDone();
+                });
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                await etcd.pipelineDrivers.resourceRequirements.delete(options);
+                await _semaphore.done();
+            });
+            it('should get data when call to watch', async () => {
+                const options = { queueName: 'blue-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                const etcdGet = await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                expect(etcdGet).to.have.deep.keys(options);
+            });
+            it('should watch all resourceRequirements', async () => {
+                const options2 = { queueName: 'yellow-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.watch();
+                etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
+                    etcd.pipelineDrivers.resourceRequirements.unwatch();
+                    expect(res).to.deep.equal(options2);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelineDrivers.resourceRequirements.set(options2);
+                await _semaphore.done();
+            });
+        });
+        describe('unwatch', () => {
+            it('should unwatch specific resourceRequirements', async () => {
+                let isCalled = false;
+                const options = { queueName: 'black-alg', data: 'bla' };
+                await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
+                    isCalled = true;
+                });
+                await etcd.pipelineDrivers.resourceRequirements.unwatch(options);
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                await delay(500);
+                expect(isCalled).to.equal(false);
+            });
+        });
+    });
+    describe('PipelineDriverQueue', () => {
+        describe('crud', () => {
+            it('should get/set specific queue', async () => {
+                const options = { queueName: 'green-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.set(options);
+                const etcdGet = await etcd.pipelineDrivers.queue.get(options);
+                expect(etcdGet).to.deep.equal(options);
+            });
+            it('should delete specific queue', async () => {
+                const options = { queueName: 'delete-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.set(options);
+                await etcd.pipelineDrivers.queue.delete(options);
+                const etcdGet = await etcd.pipelineDrivers.queue.get(options);
+                expect(etcdGet).to.be.null;
+            });
+            it('should get all queue', async () => {
+                const options1 = { queueName: 'list-1-alg', data: 'bla' };
+                const options2 = { queueName: 'list-2-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.set(options1);
+                await etcd.pipelineDrivers.queue.set(options2);
+                const list = await etcd.pipelineDrivers.queue.list({ queueName: 'list' });
+                expect(list).to.have.lengthOf(2);
+            });
+        });
+        describe('watch', () => {
+            it('should watch change queue', async () => {
+                const options = { queueName: 'green-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.watch(options);
+                etcd.pipelineDrivers.queue.on('change', (res) => {
+                    expect(res).to.deep.equal(options);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelineDrivers.queue.set(options);
+                await _semaphore.done();
+            });
+            it('should watch delete queue', async () => {
+                const options = { queueName: 'delete-green-alg' };
+                await etcd.pipelineDrivers.queue.watch(options);
+                etcd.pipelineDrivers.queue.on('delete', (res) => {
+                    expect(res).to.deep.equal({ queueName: 'delete-green-alg' });
+                    _semaphore.callDone();
+                });
+                await etcd.pipelineDrivers.queue.set(options);
+                await etcd.pipelineDrivers.queue.delete(options);
+                await _semaphore.done();
+            });
+            it('should get data when call to watch', async () => {
+                const options = { queueName: 'blue-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.set(options);
+                const etcdGet = await etcd.pipelineDrivers.queue.watch(options);
+                expect(etcdGet).to.have.deep.keys(options);
+            });
+            it('should watch all queue', async () => {
+                const options2 = { queueName: 'yellow-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.watch();
+                etcd.pipelineDrivers.queue.on('change', (res) => {
+                    etcd.pipelineDrivers.queue.unwatch();
+                    expect(res).to.deep.equal(options2);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelineDrivers.queue.set(options2);
+                await _semaphore.done();
+            });
+        });
+        describe('unwatch', () => {
+            it('should unwatch specific queue', async () => {
+                let isCalled = false;
+                const options = { queueName: 'black-alg', data: 'bla' };
+                await etcd.pipelineDrivers.queue.watch(options);
+                etcd.pipelineDrivers.queue.on('change', (res) => {
+                    isCalled = true;
+                });
+                await etcd.pipelineDrivers.queue.unwatch(options);
+                await etcd.pipelineDrivers.queue.set(options);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -1187,7 +1345,7 @@ describe('etcd', () => {
                 });
                 await etcd.algorithms.templatesStore.unwatch(options);
                 await etcd.algorithms.templatesStore.set(options);
-                await delay(1000);
+                await delay(500);
                 expect(isCalled).to.equal(false);
             });
         });
