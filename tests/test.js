@@ -1037,30 +1037,30 @@ describe('etcd', () => {
     describe('ResourceRequirements', () => {
         describe('crud', () => {
             it('should get/set specific resourceRequirement', async () => {
-                const options = { alg: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.set(options);
                 const etcdGet = await etcd.algorithms.resourceRequirements.get(options);
                 expect(etcdGet).to.equal(options.data);
             });
             it('should delete specific resourceRequirement', async () => {
-                const options = { alg: 'delete-alg', data: 'bla' };
+                const options = { name: 'delete-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.set(options);
                 await etcd.algorithms.resourceRequirements.delete(options);
                 const etcdGet = await etcd.algorithms.resourceRequirements.get(options);
                 expect(etcdGet).to.be.null;
             });
             it('should get all resourceRequirements', async () => {
-                const options1 = { alg: 'list-1-alg', data: 'bla' };
-                const options2 = { alg: 'list-2-alg', data: 'bla' };
+                const options1 = { name: 'list-1-alg', data: 'bla' };
+                const options2 = { name: 'list-2-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.set(options1);
                 await etcd.algorithms.resourceRequirements.set(options2);
-                const list = await etcd.algorithms.resourceRequirements.list({ alg: 'list' });
+                const list = await etcd.algorithms.resourceRequirements.list({ name: 'list' });
                 expect(list).to.have.lengthOf(2);
             });
         });
         describe('watch', () => {
             it('should watch change resourceRequirements', async () => {
-                const options = { alg: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.watch(options);
                 etcd.algorithms.resourceRequirements.on('change', (res) => {
                     expect(res).to.deep.equal(options);
@@ -1070,10 +1070,10 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should watch delete resourceRequirements', async () => {
-                const options = { alg: 'delete-green-alg' };
+                const options = { name: 'delete-green-alg' };
                 await etcd.algorithms.resourceRequirements.watch(options);
                 etcd.algorithms.resourceRequirements.on('delete', (res) => {
-                    expect(res).to.deep.equal({ alg: 'delete-green-alg' });
+                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
                     _semaphore.callDone();
                 });
                 await etcd.algorithms.resourceRequirements.set(options);
@@ -1081,13 +1081,13 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
-                const options = { alg: 'blue-alg', data: 'bla' };
+                const options = { name: 'blue-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.set(options);
                 const etcdGet = await etcd.algorithms.resourceRequirements.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all resourceRequirements', async () => {
-                const options2 = { alg: 'yellow-alg', data: 'bla' };
+                const options2 = { name: 'yellow-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.watch();
                 etcd.algorithms.resourceRequirements.on('change', (res) => {
                     etcd.algorithms.resourceRequirements.unwatch();
@@ -1101,7 +1101,7 @@ describe('etcd', () => {
         describe('unwatch', () => {
             it('should unwatch specific resourceRequirements', async () => {
                 let isCalled = false;
-                const options = { alg: 'black-alg', data: 'bla' };
+                const options = { name: 'black-alg', data: 'bla' };
                 await etcd.algorithms.resourceRequirements.watch(options);
                 etcd.algorithms.resourceRequirements.on('change', (res) => {
                     isCalled = true;
