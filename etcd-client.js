@@ -40,13 +40,7 @@ class EtcdClient {
         this._ttl = ttl;
         this._path = path;
         this._lease = this.client.lease(this._ttl);
-        try {
-            await this._lease.put(this._path).value(JSON.stringify(value));
-            await this._lease.keepaliveOnce();
-        }
-        catch (e) {
-            console.error(e);
-        }
+        await this._lease.put(this._path).value(JSON.stringify(value));
         return this._lease;
     }
 

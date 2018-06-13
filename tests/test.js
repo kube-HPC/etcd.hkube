@@ -284,18 +284,18 @@ describe('etcd', () => {
         describe('algorithm-queue', () => {
             it('get', async () => {
                 const { algorithmQueue } = etcd.services;
-                const queueName = `algorithm-x-${uuidv4()}`;
+                const name = `algorithm-x-${uuidv4()}`;
                 const queue = { bla: 'bla' };
-                await algorithmQueue.store({ queueName, queue });
-                const etcdGet = await algorithmQueue.get({ queueName });
+                await algorithmQueue.store({ name, queue });
+                const etcdGet = await algorithmQueue.get({ name });
                 expect(etcdGet).to.have.deep.keys(queue);
             });
             it('store', async () => {
                 const { algorithmQueue } = etcd.services;
-                const queueName = `algorithm-x-${uuidv4()}`;
+                const name = `algorithm-x-${uuidv4()}`;
                 const queue = { bla: 'bla' };
-                await algorithmQueue.store({ queueName, queue });
-                const etcdGet = await algorithmQueue.get({ queueName });
+                await algorithmQueue.store({ name, queue });
+                const etcdGet = await algorithmQueue.get({ name });
                 expect(etcdGet).to.have.deep.keys(queue);
             });
         });
@@ -958,30 +958,30 @@ describe('etcd', () => {
     describe('AlgorithmQueue', () => {
         describe('crud', () => {
             it('should get and set specific algorithmQueue', async () => {
-                const options = { queueName: 'get-alg', data: 'bla' };
+                const options = { name: 'get-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.set(options);
                 const etcdGet = await etcd.algorithms.algorithmQueue.get(options);
                 expect(etcdGet).to.deep.equal(options);
             });
             it('should delete specific algorithmQueue', async () => {
-                const options = { queueName: 'delete-alg', data: 'bla' };
+                const options = { name: 'delete-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.set(options);
                 await etcd.algorithms.algorithmQueue.delete(options);
                 const etcdGet = await etcd.algorithms.algorithmQueue.get(options);
                 expect(etcdGet).to.be.null;
             });
             it('should get algorithmQueue list', async () => {
-                const options1 = { queueName: 'list-1-alg', data: 'bla' };
-                const options2 = { queueName: 'list-2-alg', data: 'bla' };
+                const options1 = { name: 'list-1-alg', data: 'bla' };
+                const options2 = { name: 'list-2-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.set(options1);
                 await etcd.algorithms.algorithmQueue.set(options2);
-                const list = await etcd.algorithms.algorithmQueue.list({ queueName: 'list' });
+                const list = await etcd.algorithms.algorithmQueue.list({ name: 'list' });
                 expect(list).to.have.lengthOf(2);
             });
         });
         describe('watch', () => {
             it('should watch change algorithmQueue', async () => {
-                const options = { queueName: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.watch(options);
                 etcd.algorithms.algorithmQueue.on('change', (res) => {
                     expect(res).to.deep.equal(options);
@@ -991,10 +991,10 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should watch delete algorithmQueue', async () => {
-                const options = { queueName: 'delete-green-alg' };
+                const options = { name: 'delete-green-alg' };
                 await etcd.algorithms.algorithmQueue.watch(options);
                 etcd.algorithms.algorithmQueue.on('delete', (res) => {
-                    expect(res).to.deep.equal({ queueName: 'delete-green-alg' });
+                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
                     _semaphore.callDone();
                 });
                 await etcd.algorithms.algorithmQueue.set(options);
@@ -1002,13 +1002,13 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
-                const options = { queueName: 'blue-alg', data: 'bla' };
+                const options = { name: 'blue-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.set(options);
                 const etcdGet = await etcd.algorithms.algorithmQueue.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all algorithmQueue', async () => {
-                const options2 = { queueName: 'yellow-alg', data: 'bla' };
+                const options2 = { name: 'yellow-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.watch();
                 etcd.algorithms.algorithmQueue.on('change', (res) => {
                     etcd.algorithms.algorithmQueue.unwatch();
@@ -1022,7 +1022,7 @@ describe('etcd', () => {
         describe('unwatch', () => {
             it('should unwatch specific algorithmQueue', async () => {
                 let isCalled = false;
-                const options = { queueName: 'black-alg', data: 'bla' };
+                const options = { name: 'black-alg', data: 'bla' };
                 await etcd.algorithms.algorithmQueue.watch(options);
                 etcd.algorithms.algorithmQueue.on('change', (res) => {
                     isCalled = true;
@@ -1116,30 +1116,30 @@ describe('etcd', () => {
     describe('PipelineDriverRequirements', () => {
         describe('crud', () => {
             it('should get/set specific resourceRequirement', async () => {
-                const options = { queueName: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.set(options);
                 const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
                 expect(etcdGet).to.equal(options.data);
             });
             it('should delete specific resourceRequirement', async () => {
-                const options = { queueName: 'delete-alg', data: 'bla' };
+                const options = { name: 'delete-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.set(options);
                 await etcd.pipelineDrivers.resourceRequirements.delete(options);
                 const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
                 expect(etcdGet).to.be.null;
             });
             it('should get all resourceRequirements', async () => {
-                const options1 = { queueName: 'list-1-alg', data: 'bla' };
-                const options2 = { queueName: 'list-2-alg', data: 'bla' };
+                const options1 = { name: 'list-1-alg', data: 'bla' };
+                const options2 = { name: 'list-2-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.set(options1);
                 await etcd.pipelineDrivers.resourceRequirements.set(options2);
-                const list = await etcd.pipelineDrivers.resourceRequirements.list({ queueName: 'list' });
+                const list = await etcd.pipelineDrivers.resourceRequirements.list({ name: 'list' });
                 expect(list).to.have.lengthOf(2);
             });
         });
         describe('watch', () => {
             it('should watch change resourceRequirements', async () => {
-                const options = { queueName: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.watch(options);
                 etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
                     expect(res).to.deep.equal(options);
@@ -1149,10 +1149,10 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should watch delete resourceRequirements', async () => {
-                const options = { queueName: 'delete-green-alg' };
+                const options = { name: 'delete-green-alg' };
                 await etcd.pipelineDrivers.resourceRequirements.watch(options);
                 etcd.pipelineDrivers.resourceRequirements.on('delete', (res) => {
-                    expect(res).to.deep.equal({ queueName: 'delete-green-alg' });
+                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
                     _semaphore.callDone();
                 });
                 await etcd.pipelineDrivers.resourceRequirements.set(options);
@@ -1160,13 +1160,13 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
-                const options = { queueName: 'blue-alg', data: 'bla' };
+                const options = { name: 'blue-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.set(options);
                 const etcdGet = await etcd.pipelineDrivers.resourceRequirements.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all resourceRequirements', async () => {
-                const options2 = { queueName: 'yellow-alg', data: 'bla' };
+                const options2 = { name: 'yellow-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.watch();
                 etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
                     etcd.pipelineDrivers.resourceRequirements.unwatch();
@@ -1180,7 +1180,7 @@ describe('etcd', () => {
         describe('unwatch', () => {
             it('should unwatch specific resourceRequirements', async () => {
                 let isCalled = false;
-                const options = { queueName: 'black-alg', data: 'bla' };
+                const options = { name: 'black-alg', data: 'bla' };
                 await etcd.pipelineDrivers.resourceRequirements.watch(options);
                 etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
                     isCalled = true;
@@ -1195,30 +1195,30 @@ describe('etcd', () => {
     describe('PipelineDriverQueue', () => {
         describe('crud', () => {
             it('should get/set specific queue', async () => {
-                const options = { queueName: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.set(options);
                 const etcdGet = await etcd.pipelineDrivers.queue.get(options);
                 expect(etcdGet).to.deep.equal(options);
             });
             it('should delete specific queue', async () => {
-                const options = { queueName: 'delete-alg', data: 'bla' };
+                const options = { name: 'delete-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.set(options);
                 await etcd.pipelineDrivers.queue.delete(options);
                 const etcdGet = await etcd.pipelineDrivers.queue.get(options);
                 expect(etcdGet).to.be.null;
             });
             it('should get all queue', async () => {
-                const options1 = { queueName: 'list-1-alg', data: 'bla' };
-                const options2 = { queueName: 'list-2-alg', data: 'bla' };
+                const options1 = { name: 'list-1-alg', data: 'bla' };
+                const options2 = { name: 'list-2-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.set(options1);
                 await etcd.pipelineDrivers.queue.set(options2);
-                const list = await etcd.pipelineDrivers.queue.list({ queueName: 'list' });
+                const list = await etcd.pipelineDrivers.queue.list({ name: 'list' });
                 expect(list).to.have.lengthOf(2);
             });
         });
         describe('watch', () => {
             it('should watch change queue', async () => {
-                const options = { queueName: 'green-alg', data: 'bla' };
+                const options = { name: 'green-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.watch(options);
                 etcd.pipelineDrivers.queue.on('change', (res) => {
                     expect(res).to.deep.equal(options);
@@ -1228,10 +1228,10 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should watch delete queue', async () => {
-                const options = { queueName: 'delete-green-alg' };
+                const options = { name: 'delete-green-alg' };
                 await etcd.pipelineDrivers.queue.watch(options);
                 etcd.pipelineDrivers.queue.on('delete', (res) => {
-                    expect(res).to.deep.equal({ queueName: 'delete-green-alg' });
+                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
                     _semaphore.callDone();
                 });
                 await etcd.pipelineDrivers.queue.set(options);
@@ -1239,13 +1239,13 @@ describe('etcd', () => {
                 await _semaphore.done();
             });
             it('should get data when call to watch', async () => {
-                const options = { queueName: 'blue-alg', data: 'bla' };
+                const options = { name: 'blue-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.set(options);
                 const etcdGet = await etcd.pipelineDrivers.queue.watch(options);
                 expect(etcdGet).to.have.deep.keys(options);
             });
             it('should watch all queue', async () => {
-                const options2 = { queueName: 'yellow-alg', data: 'bla' };
+                const options2 = { name: 'yellow-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.watch();
                 etcd.pipelineDrivers.queue.on('change', (res) => {
                     etcd.pipelineDrivers.queue.unwatch();
@@ -1259,7 +1259,7 @@ describe('etcd', () => {
         describe('unwatch', () => {
             it('should unwatch specific queue', async () => {
                 let isCalled = false;
-                const options = { queueName: 'black-alg', data: 'bla' };
+                const options = { name: 'black-alg', data: 'bla' };
                 await etcd.pipelineDrivers.queue.watch(options);
                 etcd.pipelineDrivers.queue.on('change', (res) => {
                     isCalled = true;
