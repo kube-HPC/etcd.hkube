@@ -13,13 +13,17 @@ class EtcdClient {
             return this.client.getAll().prefix(path);
         }
         const res = await this.client.get(path);
-        return JSON.parse(res);
+        return jsonHelper.tryParseJSON(res);
     }
 
     async getAndWatch(path, options) {
         const data = await this.get(path, options);
         const watcher = await this.watch(path);
         return { data, watcher };
+    }
+
+    lock(key) {
+        return this.client.lock(key).acquire().catch(() => { });
     }
 
     async delete(path, { isPrefix = false } = {}) {

@@ -166,6 +166,37 @@ describe('etcd', () => {
             });
         });
     });
+    describe('Transaction', () => {
+        it('should do a transaction and swap keys', async () => {
+            const key1 = 'transaction/key1';
+            const key2 = 'transaction/key2';
+            const value1 = 'value1';
+            const value2 = 'value2';
+            await etcd._client.put(key1, value1);
+            await etcd._client.put(key2, value2);
+
+            try {
+                await etcd._client.client.stm({ retries: 0, isolation: 1 }).transact(tx => {
+                    return Promise.all([
+                        tx.get(key1),
+                        tx.get(key2),
+                    ]).then(([val1, val2]) => {
+                        return Promise.all([
+                            tx.put(key1).value(value2),
+                            tx.put(key2).value(value1)
+                        ]);
+                    });
+                });
+            }
+            catch (e) {
+                console.error(e);
+            }
+            const result1 = await etcd._client.get(key1);
+            const result2 = await etcd._client.get(key2);
+            expect(Object.values(result1)[0]).to.equal(value2);
+            expect(Object.values(result2)[0]).to.equal(value1);
+        });
+    });
     describe('Watch', () => {
         it('should throw already watching on', () => {
             return new Promise(async (resolve) => {
@@ -228,7 +259,7 @@ describe('etcd', () => {
         it('etcd sort with limit', async () => {
             const instanceId = `etcd-set-get-test-${uuidv4()}`;
             for (let i = 0; i < 10; i++) {
-                await etcd._client.put(`${instanceId}/${i}`, { val: `val${i}` }, null);
+                await etcd._client.put(`${instanceId}/${i}`, { val: `val${i}` });
                 await delay(100);
             }
             await delay(200);
@@ -312,13 +343,34 @@ describe('etcd', () => {
         });
         describe('watch', () => {
             it('should watch job state', async () => {
-                const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
+                const state = 'started';
                 await etcd.jobs.watch({ jobId });
                 etcd.jobs.on('change', (res) => {
                     expect(res.state).to.equal(state);
                 });
                 etcd.jobs.setState({ state, jobId });
+            });
+            it('should single watch for job change', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const state = 'started';
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.jobs.singleWatch({ jobId });
+                etcd1.jobs.on('change', callback);
+
+                await etcd2.jobs.singleWatch({ jobId });
+                etcd2.jobs.on('change', callback);
+
+                await etcd.jobs.setState({ state, jobId });
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
             });
             it('should watch stop state', async () => {
                 const state = 'stop';
@@ -426,6 +478,27 @@ describe('etcd', () => {
                 await etcd.jobResults.set({ data, jobId });
                 await _semaphore.done();
             });
+            it('should single watch for change job results', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { jobId, bla: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.jobResults.singleWatch({ jobId });
+                etcd1.jobResults.on('change', callback);
+
+                await etcd2.jobResults.singleWatch({ jobId });
+                etcd2.jobResults.on('change', callback);
+
+                await etcd.jobResults.set({ data, jobId });
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
+            });
             it('should watch for delete job results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, bla: 'bla' };
@@ -525,6 +598,27 @@ describe('etcd', () => {
                 });
                 etcd.jobStatus.set({ data, jobId });
                 await _semaphore.done();
+            });
+            it('should single watch for change job status', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const data = { jobId, bla: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.jobStatus.singleWatch({ jobId });
+                etcd1.jobStatus.on('change', callback);
+
+                await etcd2.jobStatus.singleWatch({ jobId });
+                etcd2.jobStatus.on('change', callback);
+
+                await etcd.jobStatus.set({ data, jobId });
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
             });
             it('should watch for delete job status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
@@ -929,6 +1023,26 @@ describe('etcd', () => {
                 await etcd.pipelines.set({ name, data });
                 await _semaphore.done();
             });
+            it('should single watch queue', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.pipelines.singleWatch(options);
+                etcd1.pipelines.on('change', callback);
+
+                await etcd2.pipelines.singleWatch(options);
+                etcd2.pipelines.on('change', callback);
+
+                await etcd.pipelines.set(options);
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
+            });
             it('should watch delete specific pipeline', async () => {
                 const name = 'pipeline-2';
                 const data = { name, bla: 'bla' };
@@ -989,6 +1103,26 @@ describe('etcd', () => {
                 });
                 await etcd.algorithms.algorithmQueue.set(options);
                 await _semaphore.done();
+            });
+            it('should single watch queue', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.algorithms.algorithmQueue.singleWatch(options);
+                etcd1.algorithms.algorithmQueue.on('change', callback);
+
+                await etcd2.algorithms.algorithmQueue.singleWatch(options);
+                etcd2.algorithms.algorithmQueue.on('change', callback);
+
+                await etcd.algorithms.algorithmQueue.set(options);
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
             });
             it('should watch delete algorithmQueue', async () => {
                 const options = { name: 'delete-green-alg' };
@@ -1069,6 +1203,26 @@ describe('etcd', () => {
                 await etcd.algorithms.resourceRequirements.set(options);
                 await _semaphore.done();
             });
+            it('should single watch queue', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.algorithms.resourceRequirements.singleWatch(options);
+                etcd1.algorithms.resourceRequirements.on('change', callback);
+
+                await etcd2.algorithms.resourceRequirements.singleWatch(options);
+                etcd2.algorithms.resourceRequirements.on('change', callback);
+
+                await etcd.algorithms.resourceRequirements.set(options);
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
+            });
             it('should watch delete resourceRequirements', async () => {
                 const options = { name: 'delete-green-alg' };
                 await etcd.algorithms.resourceRequirements.watch(options);
@@ -1147,6 +1301,26 @@ describe('etcd', () => {
                 });
                 await etcd.pipelineDrivers.resourceRequirements.set(options);
                 await _semaphore.done();
+            });
+            it('should single watch queue', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.pipelineDrivers.resourceRequirements.singleWatch(options);
+                etcd1.pipelineDrivers.resourceRequirements.on('change', callback);
+
+                await etcd2.pipelineDrivers.resourceRequirements.singleWatch(options);
+                etcd2.pipelineDrivers.resourceRequirements.on('change', callback);
+
+                await etcd.pipelineDrivers.resourceRequirements.set(options);
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
             });
             it('should watch delete resourceRequirements', async () => {
                 const options = { name: 'delete-green-alg' };
@@ -1227,6 +1401,26 @@ describe('etcd', () => {
                 await etcd.pipelineDrivers.queue.set(options);
                 await _semaphore.done();
             });
+            it('should single watch queue', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.pipelineDrivers.queue.singleWatch(options);
+                etcd1.pipelineDrivers.queue.on('change', callback);
+
+                await etcd2.pipelineDrivers.queue.singleWatch(options);
+                etcd2.pipelineDrivers.queue.on('change', callback);
+
+                await etcd.pipelineDrivers.queue.set(options);
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
+            });
             it('should watch delete queue', async () => {
                 const options = { name: 'delete-green-alg' };
                 await etcd.pipelineDrivers.queue.watch(options);
@@ -1305,6 +1499,26 @@ describe('etcd', () => {
                 });
                 await etcd.algorithms.templatesStore.set(options);
                 await _semaphore.done();
+            });
+            it('should single watch templatesStore', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                await etcd1.algorithms.templatesStore.singleWatch(options);
+                etcd1.algorithms.templatesStore.on('change', callback);
+
+                await etcd2.algorithms.templatesStore.singleWatch(options);
+                etcd2.algorithms.templatesStore.on('change', callback);
+
+                await etcd.algorithms.templatesStore.set(options);
+                await delay(500);
+                expect(callback.callCount).to.be.equal(1);
             });
             it('should watch delete templatesStore', async () => {
                 const options = { name: 'delete-green-alg', data: 'bla' };
