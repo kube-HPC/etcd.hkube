@@ -22,8 +22,15 @@ class EtcdClient {
         return { data, watcher };
     }
 
-    lock(key) {
+    acquireLock(key) {
         return this.client.lock(key).acquire().catch(() => { });
+    }
+
+    releaseLock(lock) {
+        if (lock) {
+            return lock.release().catch(() => { });
+        }
+        return null;
     }
 
     async delete(path, { isPrefix = false } = {}) {
@@ -37,7 +44,7 @@ class EtcdClient {
         return this.client.watch().prefix(path).create();
     }
 
-    async register(ttl, path, value) {
+    async lease(ttl, path, value) {
         if (this._lease && this._lease.state === 0) {
             throw new Error('cannot register twice');
         }
@@ -48,12 +55,12 @@ class EtcdClient {
         return this._lease;
     }
 
-    async updateRegisteredData(value) {
+    async updateLeaseData(value) {
         try {
             await this._lease.put(this._path).value(JSON.stringify(value));
         }
         catch (error) {
-            await this.register(this._ttl, this._path, value);
+            await this.lease(this._ttl, this._path, value);
         }
         return this._lease;
     }

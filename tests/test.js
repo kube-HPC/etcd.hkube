@@ -1,3 +1,5 @@
+const { Etcd3 } = require('etcd3');
+const client = new Etcd3({ hosts: 'http://localhost:4001' });
 const { expect } = require('chai');
 const sinon = require('sinon');
 const delay = require('await-delay');
@@ -11,7 +13,7 @@ const Semaphore = require('await-done').semaphore;
 let etcd, _semaphore;
 const SERVICE_NAME = 'my-test-service';
 
-describe('etcd', () => {
+describe('Tests', () => {
     beforeEach(() => {
         etcd = new Etcd();
         etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
@@ -166,6 +168,38 @@ describe('etcd', () => {
             });
         });
     });
+    describe('Locks', () => {
+        it('should acquire and release lock1', async () => {
+            const key = `/locks/lock-${uuidv4()}`;
+            const lock1 = await client.lock(key).acquire();
+            await lock1.release();
+            const lock2 = await client.lock(key).acquire();
+            expect(lock2.key).to.equal(key);
+        });
+        it('should acquire and release lock2', async () => {
+            const key = `/locks/lock-${uuidv4()}`;
+            const etcd = new Etcd();
+            etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            const lock1 = await etcd._client.acquireLock(key);
+            await etcd._client.releaseLock(lock1);
+            const lock2 = await etcd._client.acquireLock(key);
+            expect(lock2.key).to.equal(key);
+        });
+    });
+    describe('Lease', () => {
+        it('should emit keep alive event', async () => {
+            const key = `/leases/lease-${uuidv4()}`;
+            const value = { bla: 'bla' };
+            const callback = sinon.spy();
+
+            const etcd = new Etcd();
+            etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            const lease = await etcd._client.lease(1, key, value);
+            lease.on('keepaliveFired', callback);
+            await delay(500);
+            expect(callback.callCount).to.be.equal(1);
+        });
+    });
     describe('Transaction', () => {
         it('should do a transaction and swap keys', async () => {
             const key1 = 'transaction/key1';
@@ -209,7 +243,7 @@ describe('etcd', () => {
                 });
             });
         });
-        it('should throw already watching on', (done) => {
+        it('should throw unable to find watcher', (done) => {
             const pathToWatch = 'path/not_exists';
             const watcher = new Watcher(etcd._client);
             watcher.unwatch(pathToWatch).catch((error) => {
@@ -241,7 +275,6 @@ describe('etcd', () => {
             });
             await etcd._client.put(pathToWatch, { data: 'bla' });
             await _semaphore.done({ doneAmount: 1 });
-            watch.watcher.removeAllListeners();
 
             expect(changeEvent.callCount).to.be.equal(1);
             expect(putEvent.callCount).to.be.equal(1);
@@ -599,27 +632,81 @@ describe('etcd', () => {
                 etcd.jobStatus.set({ data, jobId });
                 await _semaphore.done();
             });
-            it('should single watch for change job status', async () => {
+            it('should do single watch for many events', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { jobId, bla: 'bla' };
+                const data = { bla: 'bla' };
                 const callback = sinon.spy();
+                const callbackClients = sinon.spy();
 
                 const etcd1 = new Etcd();
                 etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                await etcd1.jobStatus.singleWatch();
+                etcd1.jobStatus.on('change', callback);
 
                 const etcd2 = new Etcd();
                 etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                await etcd1.jobStatus.singleWatch({ jobId });
-                etcd1.jobStatus.on('change', callback);
-
-                await etcd2.jobStatus.singleWatch({ jobId });
+                await etcd2.jobStatus.singleWatch();
                 etcd2.jobStatus.on('change', callback);
 
                 await etcd.jobStatus.set({ data, jobId });
+                await etcd.jobStatus.set({ data, jobId });
+                await etcd.jobStatus.set({ data, jobId });
+                await etcd.jobStatus.set({ data, jobId });
+
                 await delay(500);
-                expect(callback.callCount).to.be.equal(1);
+
+                let client = null;
+                const client1 = etcd1.jobStatus._locker._locks.size;
+                const client2 = etcd2.jobStatus._locker._locks.size;
+
+                if (client1 === 1 && client2 === 0) {
+                    client = etcd1;
+                    callbackClients();
+                }
+                else if (client1 === 0 && client2 === 1) {
+                    client = etcd2;
+                    callbackClients();
+                }
+                await client.jobStatus.releaseChangeLock(jobId);
+                await client.jobStatus.unwatch();
+                await client.jobStatus.singleWatch();
+                await etcd.jobStatus.set({ data, jobId });
+
+                await delay(500);
+
+                expect(callback.callCount).to.be.equal(5);
+                expect(callbackClients.callCount).to.be.equal(1);
+
             });
+            it('should single watch for change job status', async () => {
+                const jobId1 = `jobid-${uuidv4()}`;
+                const jobId2 = `jobid-${uuidv4()}`;
+                const data1 = { bla: 'bla1' };
+                const data2 = { bla: 'bla2' };
+                const callback = sinon.spy();
+
+                const client = new Etcd();
+                client.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                const etcd1 = new Etcd();
+                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                await etcd1.jobStatus.singleWatch();
+                etcd1.jobStatus.on('change', callback);
+
+                const etcd2 = new Etcd();
+                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                await etcd2.jobStatus.singleWatch();
+                etcd2.jobStatus.on('change', callback);
+
+                await client.jobStatus.set({ data: data1, jobId: jobId1 });
+                await client.jobStatus.set({ data: data2, jobId: jobId2 });
+                await client.jobStatus.set({ data: data1, jobId: jobId1 });
+                await client.jobStatus.set({ data: data2, jobId: jobId2 });
+
+                await delay(2000);
+
+                expect(callback.callCount).to.be.equal(4);
+            }).timeout(3000);
             it('should watch for delete job status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, bla: 'bla' };
