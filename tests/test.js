@@ -685,9 +685,6 @@ describe('Tests', () => {
                 const data2 = { bla: 'bla2' };
                 const callback = sinon.spy();
 
-                const client = new Etcd();
-                client.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
                 const etcd1 = new Etcd();
                 etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
                 await etcd1.jobStatus.singleWatch();
@@ -698,12 +695,12 @@ describe('Tests', () => {
                 await etcd2.jobStatus.singleWatch();
                 etcd2.jobStatus.on('change', callback);
 
-                await client.jobStatus.set({ data: data1, jobId: jobId1 });
-                await client.jobStatus.set({ data: data2, jobId: jobId2 });
-                await client.jobStatus.set({ data: data1, jobId: jobId1 });
-                await client.jobStatus.set({ data: data2, jobId: jobId2 });
+                await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
+                await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
+                await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
+                await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
 
-                await delay(2000);
+                await delay(2500);
 
                 expect(callback.callCount).to.be.equal(4);
             }).timeout(3000);
