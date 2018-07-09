@@ -168,6 +168,19 @@ describe('Tests', () => {
             });
         });
     });
+    describe('Stress', () => {
+        it('should put and get large object', async () => {
+            const array = [];
+            const size = 1000;
+            for (var i = 0; i < size; i++) {
+                array.push({ score: 70 });
+            }
+            await etcd._client.put('/test', array);
+            const json = await etcd._client.get('/test');
+            const result = JSON.parse(Object.values(json)[0]);
+            expect(result).to.deep.equal(array);
+        });
+    });
     describe('Locks', () => {
         it('should acquire and release lock1', async () => {
             const key = `/locks/lock-${uuidv4()}`;
