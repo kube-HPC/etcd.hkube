@@ -441,11 +441,13 @@ describe('Tests', () => {
                     expect(res.state).to.equal(state);
                     expect(res.reason).to.equal(reason);
                     callback()
+                    _semaphore.callDone()
                 });
-                etcd.jobState.stop({ reason, jobId });
                 etcd.jobState.stop({ reason, jobId:jobId2 });
-                await delay(500);
+                etcd.jobState.stop({ reason, jobId });
+                await _semaphore.done({ doneAmount: 2 });
                 expect(callback.callCount).to.be.equal(2);
+                etcd.jobState.removeAllListeners(['change'])
             });
             it('should get watch object', async () => {
                 const state = 'started';
