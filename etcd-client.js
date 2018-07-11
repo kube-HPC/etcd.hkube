@@ -33,36 +33,33 @@ class EtcdClient {
         return null;
     }
 
-    async delete(path, { isPrefix = false } = {}) {
+    delete(path, { isPrefix = false } = {}) {
         if (isPrefix) {
             return this.client.delete().prefix(path);
         }
         return this.client.delete().key(path);
     }
 
-    async watch(path) {
+    watch(path) {
         return this.client.watch().prefix(path).create();
     }
 
-    async lease(ttl, path, value) {
+    lease(ttl, path, value) {
         if (this._lease && this._lease.state === 0) {
             throw new Error('cannot register twice');
         }
         this._ttl = ttl;
         this._path = path;
         this._lease = this.client.lease(this._ttl);
-        await this._lease.put(this._path).value(JSON.stringify(value));
-        return this._lease;
+        return this._updateLease(value);
     }
 
-    async updateLeaseData(value) {
-        try {
-            await this._lease.put(this._path).value(JSON.stringify(value));
-        }
-        catch (error) {
-            await this.lease(this._ttl, this._path, value);
-        }
-        return this._lease;
+    updateLeaseData(value) {
+        return this._updateLease(value);
+    }
+
+    _updateLease(value) {
+        return this._lease.put(this._path).value(JSON.stringify(value));
     }
 
     async put(path, value) {

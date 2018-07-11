@@ -200,18 +200,35 @@ describe('Tests', () => {
         });
     });
     describe('Lease', () => {
-        it('should emit keep alive event', async () => {
+        it('should create lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const callback = sinon.spy();
-
             const etcd = new Etcd();
             etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-            const lease = await etcd._client.lease(1, key, value);
-            lease.on('keepaliveFired', callback);
-            await delay(500);
-            expect(callback.callCount).to.be.equal(1);
+            await etcd._client.lease(10, key, value);
+            const lease = await etcd._client.get(key, { isPrefix: false });
+            expect(lease).to.deep.equal(value);
         });
+        it('should update lease', async () => {
+            const key = `/leases/lease-${uuidv4()}`;
+            const value = { bla1: 'bla' };
+            const value1 = { bla1: 'bla1' };
+            const value2 = { bla2: 'bla2' };
+            const value3 = { bla3: 'bla3' };
+            const value4 = { bla4: 'bla4' };
+            const value5 = { bla5: 'bla5' };
+            const etcd = new Etcd();
+            etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            await etcd._client.lease(1, key, value);
+            await etcd._client.updateLeaseData(value1);
+            await etcd._client.updateLeaseData(value2);
+            await etcd._client.updateLeaseData(value3);
+            await etcd._client.updateLeaseData(value4);
+            await etcd._client.updateLeaseData(value5);
+
+            const lease = await etcd._client.get(key, { isPrefix: false });
+            expect(lease).to.deep.equal(value5);
+        }).timeout(5000);
     });
     describe('Transaction', () => {
         it('should do a transaction and swap keys', async () => {
