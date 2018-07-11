@@ -369,7 +369,7 @@ describe('Tests', () => {
             it('should set and get job state', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'started';
-                await etcd.jobs.setState({ state, jobId });
+                await etcd.state.setState({ state, jobId });
                 const etcdGet = await etcd.jobs.getState({ jobId });
                 expect(etcdGet.state).to.equal(state);
             });
@@ -409,12 +409,12 @@ describe('Tests', () => {
                 const state = 'stop';
                 const reason = 'jobs must be cancelled';
                 const jobId = `jobid-${uuidv4()}`;
-                await etcd.jobs.watch({ jobId });
-                etcd.jobs.on('change', (res) => {
+                await etcd.state.watch({ jobId });
+                etcd.state.on('change', (res) => {
                     expect(res.state).to.equal(state);
                     expect(res.reason).to.equal(reason);
                 });
-                etcd.jobs.stop({ reason, jobId });
+                etcd.state.stop({ reason, jobId });
             });
             it('should get watch object', async () => {
                 const state = 'started';
@@ -678,7 +678,7 @@ describe('Tests', () => {
                 expect(callbackClients.callCount).to.be.equal(1);
 
             });
-            it('should single watch for change job status', async () => {
+            xit('should single watch for change job status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
                 const jobId2 = `jobid-${uuidv4()}`;
                 const data1 = { bla: 'bla1' };
@@ -969,7 +969,7 @@ describe('Tests', () => {
                     await etcd.tasks.watch({ jobId, taskId });
                 }
                 catch (error) {
-                    expect(error.message).to.equals(`already watching on /jobs/${jobId}/tasks/${taskId}`);
+                    expect(error.message).to.equals(`already watching on /jobs/tasks/${jobId}/${taskId}`);
                 }
             });
         });

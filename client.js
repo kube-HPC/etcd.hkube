@@ -7,6 +7,7 @@ const JobResults = require('./lib/jobResults/jobResults');
 const JobStatus = require('./lib/jobStatus/jobStatus');
 const Webhooks = require('./lib/webhooks/webhooks');
 const Tasks = require('./lib/tasks/tasks');
+const State = require('./lib/state/state');
 const Pipelines = require('./lib/pipelines/pipelines');
 const Execution = require('./lib/execution/execution');
 const Workers = require('./lib/workers/workers');
@@ -26,6 +27,7 @@ class Client {
         this.jobStatus = new JobStatus();
         this.webhooks = new Webhooks();
         this.tasks = new Tasks();
+        this.state = new State();
         this.pipelines = new Pipelines();
         this.execution = new Execution();
         this.workers = new Workers();
@@ -67,6 +69,7 @@ class Client {
             this.jobStatus.init(data);
             this.webhooks.init(data);
             this.tasks.init(data);
+            this.state.init(data);
             this.workers.init(data);
             this.pipelines.init(data);
             this.execution.init(data);
