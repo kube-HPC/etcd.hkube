@@ -429,6 +429,24 @@ describe('Tests', () => {
                 });
                 etcd.jobState.stop({ reason, jobId });
             });
+
+            it('should watch stop all', async () => {
+                const callback = sinon.spy();
+                const state = 'stop';
+                const reason = 'jobs must be cancelled';
+                const jobId = `jobid-${uuidv4()}`;
+                const jobId2 = `jobid-${uuidv4()}`;
+                await etcd.jobState.watch();
+                etcd.jobState.on('change', (res) => {
+                    expect(res.state).to.equal(state);
+                    expect(res.reason).to.equal(reason);
+                    callback()
+                });
+                etcd.jobState.stop({ reason, jobId });
+                etcd.jobState.stop({ reason, jobId:jobId2 });
+                await delay(500);
+                expect(callback.callCount).to.be.equal(2);
+            });
             it('should get watch object', async () => {
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
@@ -436,6 +454,7 @@ describe('Tests', () => {
                 const object = await etcd.jobState.watch({ jobId });
                 expect(object).to.deep.equal({ state });
             });
+            
         });
         describe('unwatch', () => {
             it('should unwatch job state', async () => {
