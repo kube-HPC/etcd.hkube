@@ -168,6 +168,19 @@ describe('Tests', () => {
             });
         });
     });
+    describe('Stress', () => {
+        it('should put and get large object', async () => {
+            const array = [];
+            const size = 1000;
+            for (var i = 0; i < size; i++) {
+                array.push({ score: 70 });
+            }
+            await etcd._client.put('/test', array);
+            const json = await etcd._client.get('/test');
+            const result = JSON.parse(Object.values(json)[0]);
+            expect(result).to.deep.equal(array);
+        });
+    });
     describe('Locks', () => {
         it('should acquire and release lock1', async () => {
             const key = `/locks/lock-${uuidv4()}`;
@@ -364,13 +377,13 @@ describe('Tests', () => {
             });
         });
     });
-    describe('Jobs', () => {
+    describe('JobState', () => {
         describe('sets', () => {
             it('should set and get job state', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'started';
-                await etcd.state.setState({ state, jobId });
-                const etcdGet = await etcd.jobs.getState({ jobId });
+                await etcd.jobState.setState({ state, jobId });
+                const etcdGet = await etcd.jobState.getState({ jobId });
                 expect(etcdGet.state).to.equal(state);
             });
         });
@@ -378,11 +391,11 @@ describe('Tests', () => {
             it('should watch job state', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'started';
-                await etcd.jobs.watch({ jobId });
-                etcd.jobs.on('change', (res) => {
+                await etcd.jobState.watch({ jobId });
+                etcd.jobState.on('change', (res) => {
                     expect(res.state).to.equal(state);
                 });
-                etcd.jobs.setState({ state, jobId });
+                etcd.jobState.setState({ state, jobId });
             });
             it('should single watch for job change', async () => {
                 const jobId = `jobid-${uuidv4()}`;
@@ -395,13 +408,13 @@ describe('Tests', () => {
                 const etcd2 = new Etcd();
                 etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
 
-                await etcd1.jobs.singleWatch({ jobId });
-                etcd1.jobs.on('change', callback);
+                await etcd1.jobState.singleWatch({ jobId });
+                etcd1.jobState.on('change', callback);
 
-                await etcd2.jobs.singleWatch({ jobId });
-                etcd2.jobs.on('change', callback);
+                await etcd2.jobState.singleWatch({ jobId });
+                etcd2.jobState.on('change', callback);
 
-                await etcd.jobs.setState({ state, jobId });
+                await etcd.jobState.setState({ state, jobId });
                 await delay(500);
                 expect(callback.callCount).to.be.equal(1);
             });
@@ -409,18 +422,18 @@ describe('Tests', () => {
                 const state = 'stop';
                 const reason = 'jobs must be cancelled';
                 const jobId = `jobid-${uuidv4()}`;
-                await etcd.state.watch({ jobId });
-                etcd.state.on('change', (res) => {
+                await etcd.jobState.watch({ jobId });
+                etcd.jobState.on('change', (res) => {
                     expect(res.state).to.equal(state);
                     expect(res.reason).to.equal(reason);
                 });
-                etcd.state.stop({ reason, jobId });
+                etcd.jobState.stop({ reason, jobId });
             });
             it('should get watch object', async () => {
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
-                await etcd.jobs.setState({ state, jobId });
-                const object = await etcd.jobs.watch({ jobId });
+                await etcd.jobState.setState({ state, jobId });
+                const object = await etcd.jobState.watch({ jobId });
                 expect(object).to.deep.equal({ state });
             });
         });
@@ -429,12 +442,12 @@ describe('Tests', () => {
                 let isCalled = false;
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
-                await etcd.jobs.watch({ jobId });
-                etcd.jobs.on('change', () => {
+                await etcd.jobState.watch({ jobId });
+                etcd.jobState.on('change', () => {
                     isCalled = true;
                 });
-                await etcd.jobs.unwatch({ jobId });
-                etcd.jobs.setState({ state, jobId });
+                await etcd.jobState.unwatch({ jobId });
+                etcd.jobState.setState({ state, jobId });
                 await delay(500);
                 expect(isCalled).to.equal(false);
             });
@@ -678,32 +691,33 @@ describe('Tests', () => {
                 expect(callbackClients.callCount).to.be.equal(1);
 
             });
-            xit('should single watch for change job status', async () => {
-                const jobId1 = `jobid-${uuidv4()}`;
-                const jobId2 = `jobid-${uuidv4()}`;
-                const data1 = { bla: 'bla1' };
-                const data2 = { bla: 'bla2' };
-                const callback = sinon.spy();
+            // it('should single watch for change job status', async () => {
+            //     const jobId1 = `jobid-${uuidv4()}`;
+            //     const jobId2 = `jobid-${uuidv4()}`;
+            //     const data1 = { bla: 'bla1' };
+            //     const data2 = { bla: 'bla2' };
+            //     const callback = sinon.spy();
 
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-                await etcd1.jobStatus.singleWatch();
-                etcd1.jobStatus.on('change', callback);
+            //     const etcd1 = new Etcd();
+            //     etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            //     await etcd1.jobStatus.singleWatch();
+            //     etcd1.jobStatus.on('change', callback);
 
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-                await etcd2.jobStatus.singleWatch();
-                etcd2.jobStatus.on('change', callback);
+            //     const etcd2 = new Etcd();
+            //     etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            //     await etcd2.jobStatus.singleWatch();
+            //     etcd2.jobStatus.on('change', callback);
 
-                await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
-                await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
-                await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
-                await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
+            //     await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
+            //     await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
+            //     await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
+            //     await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
 
-                await delay(2500);
+            //     await delay(2500);
 
-                expect(callback.callCount).to.be.equal(4);
-            }).timeout(3000);
+            //     expect(callback.callCount).to.be.equal(4);
+            // }).timeout(4000);
+
             it('should watch for delete job status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, bla: 'bla' };

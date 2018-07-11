@@ -2,7 +2,7 @@ const EtcdClient = require('./etcd-client');
 const djsv = require('djsv');
 const Discovery = require('./lib/discovery/discovery');
 const Services = require('./lib/services/services');
-const Jobs = require('./lib/jobs/jobs');
+// const Jobs = require('./lib/jobs/jobs');
 const JobResults = require('./lib/jobResults/jobResults');
 const JobStatus = require('./lib/jobStatus/jobStatus');
 const Webhooks = require('./lib/webhooks/webhooks');
@@ -15,6 +15,7 @@ const PipelineDriverQueue = require('./lib/pipeline-driver/queue');
 const PipelineDriverRequirements = require('./lib/pipeline-driver/requirements');
 const { AlgorithmQueue, ResourceRequirements, TemplatesStore } = require('./lib/algorithms/index');
 const { initSchema } = require('./lib/schema');
+ 
 
 class Client {
     constructor() {
@@ -22,12 +23,12 @@ class Client {
         this._initSchema = djsv(initSchema);
         this.discovery = new Discovery();
         this.services = new Services();
-        this.jobs = new Jobs();
+        //     this.jobs = new Jobs();
         this.jobResults = new JobResults();
         this.jobStatus = new JobStatus();
         this.webhooks = new Webhooks();
         this.tasks = new Tasks();
-        this.state = new State();
+        this.jobState = new State();
         this.pipelines = new Pipelines();
         this.execution = new Execution();
         this.workers = new Workers();
@@ -64,12 +65,12 @@ class Client {
             };
             this.discovery.init(data);
             this.services.init(data);
-            this.jobs.init(data);
+            // this.jobs.init(data);
             this.jobResults.init(data);
             this.jobStatus.init(data);
             this.webhooks.init(data);
             this.tasks.init(data);
-            this.state.init(data);
+            this.jobState.init(data);
             this.workers.init(data);
             this.pipelines.init(data);
             this.execution.init(data);
