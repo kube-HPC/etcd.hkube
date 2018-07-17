@@ -144,18 +144,36 @@ describe('Tests', () => {
             });
         });
         describe('watch', () => {
-            it('should watch for change job results', async () => {
-                await etcd.discovery.watch();
+            it('should watch for after register', async () => {
+                const instanceId = `my-instance-${uuidv4()}`;
+                await etcd.discovery.watch({ instanceId });
                 etcd.discovery.on('change', (res) => {
-                    expect(res.jobId).to.equal(SERVICE_NAME);
+                    etcd.discovery.removeAllListeners();
+                    expect(res.instanceId).to.equal(instanceId);
+                    expect(res.serviceName).to.equal(SERVICE_NAME);
                     _semaphore.callDone();
                 });
-                await etcd.discovery.register({ instanceId: 's' });
+                await etcd.discovery.register({ instanceId });
+                await _semaphore.done();
+            });
+            it('should watch after set', async () => {
+                const data1 = { data: [1, 2, 3] };
+                const data2 = { data: [4, 5, 6] };
+                await etcd.discovery.register({ data: data1 });
+                await etcd.discovery.watch({ instanceId: etcd.discovery._instanceId });
+                etcd.discovery.on('change', (res) => {
+                    etcd.discovery.removeAllListeners();
+                    expect(res.instanceId).to.equal(etcd.discovery._instanceId);
+                    expect(res.serviceName).to.equal(SERVICE_NAME);
+                    expect(res.data).to.deep.equal(data2);
+                    _semaphore.callDone();
+                });
+                await etcd.discovery.set({ instanceId: etcd.discovery._instanceId, serviceName: SERVICE_NAME, data: data2 });
                 await _semaphore.done();
             });
         });
         describe('unwatch', () => {
-            it('should unwatch job results', async () => {
+            it('should unwatch', async () => {
                 let isCalled = false;
                 await etcd.discovery.watch();
                 etcd.discovery.on('change', () => {
@@ -460,7 +478,7 @@ describe('Tests', () => {
                     callback()
                     _semaphore.callDone()
                 });
-                etcd.jobState.stop({ reason, jobId:jobId2 });
+                etcd.jobState.stop({ reason, jobId: jobId2 });
                 etcd.jobState.stop({ reason, jobId });
                 await _semaphore.done({ doneAmount: 2 });
                 expect(callback.callCount).to.be.equal(2);
@@ -473,7 +491,7 @@ describe('Tests', () => {
                 const object = await etcd.jobState.watch({ jobId });
                 expect(object).to.deep.equal({ state });
             });
-            
+
         });
         describe('unwatch', () => {
             it('should unwatch job state', async () => {
@@ -683,7 +701,7 @@ describe('Tests', () => {
                 etcd.jobStatus.set({ data, jobId });
                 await _semaphore.done();
             });
-           
+
             it('should single watch for change job status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
                 const jobId2 = `jobid-${uuidv4()}`;
