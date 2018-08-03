@@ -13,6 +13,8 @@ const Execution = require('./lib/execution/execution');
 const Workers = require('./lib/workers/workers');
 const PipelineDriverQueue = require('./lib/pipeline-driver/queue');
 const PipelineDriverRequirements = require('./lib/pipeline-driver/requirements');
+const AlgorithmDebug = require('./lib/debug/debug');
+
 const { AlgorithmQueue, ResourceRequirements, TemplatesStore } = require('./lib/algorithms/index');
 const { initSchema } = require('./lib/schema');
  
@@ -39,6 +41,7 @@ class Client {
         this.pipelineDrivers = {};
         this.pipelineDrivers.queue = new PipelineDriverQueue();
         this.pipelineDrivers.resourceRequirements = new PipelineDriverRequirements();
+        this.algorithmDebug = new AlgorithmDebug();
     }
 
     /**
@@ -79,6 +82,7 @@ class Client {
             this.algorithms.templatesStore.init(data);
             this.pipelineDrivers.queue.init(data);
             this.pipelineDrivers.resourceRequirements.init(data);
+            this.algorithmDebug.init(data);
             return this;
         }
         throw new Error(initSchemaConfig.error);
