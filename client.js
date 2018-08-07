@@ -1,8 +1,7 @@
-const EtcdClient = require('./etcd-client');
 const djsv = require('djsv');
+const EtcdClient = require('./etcd-client');
 const Discovery = require('./lib/discovery/discovery');
 const Services = require('./lib/services/services');
-// const Jobs = require('./lib/jobs/jobs');
 const JobResults = require('./lib/jobResults/jobResults');
 const JobStatus = require('./lib/jobStatus/jobStatus');
 const Webhooks = require('./lib/webhooks/webhooks');
@@ -11,13 +10,10 @@ const State = require('./lib/state/state');
 const Pipelines = require('./lib/pipelines/pipelines');
 const Execution = require('./lib/execution/execution');
 const Workers = require('./lib/workers/workers');
-const PipelineDriverQueue = require('./lib/pipeline-driver/queue');
-const PipelineDriverRequirements = require('./lib/pipeline-driver/requirements');
+const { PipelineDriverQueue, PipelineDriverRequirements, PipelineDriverTemplatesStore } = require('./lib/pipeline-driver');
 const AlgorithmDebug = require('./lib/debug/debug');
-
 const { AlgorithmQueue, ResourceRequirements, TemplatesStore } = require('./lib/algorithms/index');
 const { initSchema } = require('./lib/schema');
- 
 
 class Client {
     constructor() {
@@ -25,7 +21,6 @@ class Client {
         this._initSchema = djsv(initSchema);
         this.discovery = new Discovery();
         this.services = new Services();
-        //     this.jobs = new Jobs();
         this.jobResults = new JobResults();
         this.jobStatus = new JobStatus();
         this.webhooks = new Webhooks();
@@ -41,6 +36,7 @@ class Client {
         this.pipelineDrivers = {};
         this.pipelineDrivers.queue = new PipelineDriverQueue();
         this.pipelineDrivers.resourceRequirements = new PipelineDriverRequirements();
+        this.pipelineDrivers.templatesStore = new PipelineDriverTemplatesStore();
         this.algorithmDebug = new AlgorithmDebug();
     }
 
@@ -82,6 +78,7 @@ class Client {
             this.algorithms.templatesStore.init(data);
             this.pipelineDrivers.queue.init(data);
             this.pipelineDrivers.resourceRequirements.init(data);
+            this.pipelineDrivers.templatesStore.init(data);
             this.algorithmDebug.init(data);
             return this;
         }

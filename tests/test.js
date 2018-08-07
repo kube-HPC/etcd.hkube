@@ -1178,498 +1178,601 @@ describe('Tests', () => {
             });
         });
     });
-    describe('AlgorithmQueue', () => {
-        describe('crud', () => {
-            it('should get and set specific algorithmQueue', async () => {
-                const options = { name: 'get-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.set(options);
-                const etcdGet = await etcd.algorithms.algorithmQueue.get(options);
-                expect(etcdGet).to.deep.equal(options);
+    describe('Algorithms', () => {
+        describe('TemplatesStore', () => {
+            describe('crud', () => {
+                it('should get/set specific templatesStore', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.set(options);
+                    const etcdGet = await etcd.algorithms.templatesStore.get(options);
+                    expect(etcdGet).to.equal(options.data);
+                });
+                it('should delete specific templatesStore', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.set(options);
+                    const deleteRes = await etcd.algorithms.templatesStore.delete(options);
+                    const getRes = await etcd.algorithms.templatesStore.get(options);
+                    expect(getRes).to.be.null;
+                });
+                it('should get templatesStore list', async () => {
+                    const options1 = { name: 'list-1-alg', data: 'bla' };
+                    const options2 = { name: 'list-2-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.set(options1);
+                    await etcd.algorithms.templatesStore.set(options2);
+                    const list = await etcd.algorithms.templatesStore.list({ name: 'list' });
+                    expect(list).to.have.lengthOf(2);
+                });
             });
-            it('should delete specific algorithmQueue', async () => {
-                const options = { name: 'delete-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.set(options);
-                await etcd.algorithms.algorithmQueue.delete(options);
-                const etcdGet = await etcd.algorithms.algorithmQueue.get(options);
-                expect(etcdGet).to.be.null;
+            describe('watch', () => {
+                it('should watch change templatesStore', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.watch(options);
+                    etcd.algorithms.templatesStore.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.templatesStore.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch templatesStore', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd();
+                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    const etcd2 = new Etcd();
+                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    await etcd1.algorithms.templatesStore.singleWatch(options);
+                    etcd1.algorithms.templatesStore.on('change', callback);
+
+                    await etcd2.algorithms.templatesStore.singleWatch(options);
+                    etcd2.algorithms.templatesStore.on('change', callback);
+
+                    await etcd.algorithms.templatesStore.set(options);
+                    await delay(500);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete templatesStore', async () => {
+                    const options = { name: 'delete-green-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.watch(options);
+                    etcd.algorithms.templatesStore.on('delete', (res) => {
+                        expect(res).to.deep.equal({ name: 'delete-green-alg' });
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.templatesStore.set(options);
+                    await etcd.algorithms.templatesStore.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.set(options);
+                    const etcdGet = await etcd.algorithms.templatesStore.watch(options);
+                    expect(etcdGet).to.have.deep.keys(options);
+                });
+                it('should watch all templatesStore', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.watch();
+                    etcd.algorithms.templatesStore.on('change', (res) => {
+                        etcd.algorithms.templatesStore.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.templatesStore.set(options2);
+                    await _semaphore.done();
+                });
             });
-            it('should get algorithmQueue list', async () => {
-                const options1 = { name: 'list-1-alg', data: 'bla' };
-                const options2 = { name: 'list-2-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.set(options1);
-                await etcd.algorithms.algorithmQueue.set(options2);
-                const list = await etcd.algorithms.algorithmQueue.list({ name: 'list' });
-                expect(list).to.have.lengthOf(2);
+            describe('unwatch', () => {
+                it('should unwatch specific templatesStore', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.algorithms.templatesStore.watch(options);
+                    etcd.algorithms.templatesStore.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.templatesStore.unwatch(options);
+                    await etcd.algorithms.templatesStore.set(options);
+                    await delay(500);
+                    expect(isCalled).to.equal(false);
+                });
             });
         });
-        describe('watch', () => {
-            it('should watch change algorithmQueue', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.watch(options);
-                etcd.algorithms.algorithmQueue.on('change', (res) => {
-                    expect(res).to.deep.equal(options);
-                    _semaphore.callDone();
+        describe('ResourceRequirements', () => {
+            describe('crud', () => {
+                it('should get/set specific resourceRequirement', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    const etcdGet = await etcd.algorithms.resourceRequirements.get(options);
+                    expect(etcdGet).to.equal(options.data);
                 });
-                await etcd.algorithms.algorithmQueue.set(options);
-                await _semaphore.done();
-            });
-            it('should single watch queue', async () => {
-                const options = { name: 'single-watch-alg', data: 'bla' };
-                const callback = sinon.spy();
-
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                await etcd1.algorithms.algorithmQueue.singleWatch(options);
-                etcd1.algorithms.algorithmQueue.on('change', callback);
-
-                await etcd2.algorithms.algorithmQueue.singleWatch(options);
-                etcd2.algorithms.algorithmQueue.on('change', callback);
-
-                await etcd.algorithms.algorithmQueue.set(options);
-                await delay(500);
-                expect(callback.callCount).to.be.equal(1);
-            });
-            it('should watch delete algorithmQueue', async () => {
-                const options = { name: 'delete-green-alg' };
-                await etcd.algorithms.algorithmQueue.watch(options);
-                etcd.algorithms.algorithmQueue.on('delete', (res) => {
-                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
-                    _semaphore.callDone();
+                it('should delete specific resourceRequirement', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    await etcd.algorithms.resourceRequirements.delete(options);
+                    const etcdGet = await etcd.algorithms.resourceRequirements.get(options);
+                    expect(etcdGet).to.be.null;
                 });
-                await etcd.algorithms.algorithmQueue.set(options);
-                await etcd.algorithms.algorithmQueue.delete(options);
-                await _semaphore.done();
-            });
-            it('should get data when call to watch', async () => {
-                const options = { name: 'blue-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.set(options);
-                const etcdGet = await etcd.algorithms.algorithmQueue.watch(options);
-                expect(etcdGet).to.have.deep.keys(options);
-            });
-            it('should watch all algorithmQueue', async () => {
-                const options2 = { name: 'yellow-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.watch();
-                etcd.algorithms.algorithmQueue.on('change', (res) => {
-                    etcd.algorithms.algorithmQueue.unwatch();
-                    expect(res).to.deep.equal(options2);
-                    _semaphore.callDone();
+                it('should get all resourceRequirements', async () => {
+                    const options1 = { name: 'list-1-alg', data: 'bla' };
+                    const options2 = { name: 'list-2-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.set(options1);
+                    await etcd.algorithms.resourceRequirements.set(options2);
+                    const list = await etcd.algorithms.resourceRequirements.list({ name: 'list' });
+                    expect(list).to.have.lengthOf(2);
                 });
-                await etcd.algorithms.algorithmQueue.set(options2);
-                await _semaphore.done();
+            });
+            describe('watch', () => {
+                it('should watch change resourceRequirements', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.watch(options);
+                    etcd.algorithms.resourceRequirements.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch queue', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd();
+                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    const etcd2 = new Etcd();
+                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    await etcd1.algorithms.resourceRequirements.singleWatch(options);
+                    etcd1.algorithms.resourceRequirements.on('change', callback);
+
+                    await etcd2.algorithms.resourceRequirements.singleWatch(options);
+                    etcd2.algorithms.resourceRequirements.on('change', callback);
+
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    await delay(500);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete resourceRequirements', async () => {
+                    const options = { name: 'delete-green-alg' };
+                    await etcd.algorithms.resourceRequirements.watch(options);
+                    etcd.algorithms.resourceRequirements.on('delete', (res) => {
+                        expect(res).to.deep.equal({ name: 'delete-green-alg' });
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    await etcd.algorithms.resourceRequirements.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    const etcdGet = await etcd.algorithms.resourceRequirements.watch(options);
+                    expect(etcdGet).to.have.deep.keys(options);
+                });
+                it('should watch all resourceRequirements', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.watch();
+                    etcd.algorithms.resourceRequirements.on('change', (res) => {
+                        etcd.algorithms.resourceRequirements.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.resourceRequirements.set(options2);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific resourceRequirements', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.algorithms.resourceRequirements.watch(options);
+                    etcd.algorithms.resourceRequirements.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.resourceRequirements.unwatch(options);
+                    await etcd.algorithms.resourceRequirements.set(options);
+                    await delay(500);
+                    expect(isCalled).to.equal(false);
+                });
             });
         });
-        describe('unwatch', () => {
-            it('should unwatch specific algorithmQueue', async () => {
-                let isCalled = false;
-                const options = { name: 'black-alg', data: 'bla' };
-                await etcd.algorithms.algorithmQueue.watch(options);
-                etcd.algorithms.algorithmQueue.on('change', (res) => {
-                    isCalled = true;
+        describe('Queue', () => {
+            describe('crud', () => {
+                it('should get and set specific algorithmQueue', async () => {
+                    const options = { name: 'get-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    const etcdGet = await etcd.algorithms.algorithmQueue.get(options);
+                    expect(etcdGet).to.deep.equal(options);
                 });
-                await etcd.algorithms.algorithmQueue.unwatch(options);
-                await etcd.algorithms.algorithmQueue.set(options);
-                await delay(500);
-                expect(isCalled).to.equal(false);
-            });
-        });
-    });
-    describe('ResourceRequirements', () => {
-        describe('crud', () => {
-            it('should get/set specific resourceRequirement', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.set(options);
-                const etcdGet = await etcd.algorithms.resourceRequirements.get(options);
-                expect(etcdGet).to.equal(options.data);
-            });
-            it('should delete specific resourceRequirement', async () => {
-                const options = { name: 'delete-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.set(options);
-                await etcd.algorithms.resourceRequirements.delete(options);
-                const etcdGet = await etcd.algorithms.resourceRequirements.get(options);
-                expect(etcdGet).to.be.null;
-            });
-            it('should get all resourceRequirements', async () => {
-                const options1 = { name: 'list-1-alg', data: 'bla' };
-                const options2 = { name: 'list-2-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.set(options1);
-                await etcd.algorithms.resourceRequirements.set(options2);
-                const list = await etcd.algorithms.resourceRequirements.list({ name: 'list' });
-                expect(list).to.have.lengthOf(2);
-            });
-        });
-        describe('watch', () => {
-            it('should watch change resourceRequirements', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.watch(options);
-                etcd.algorithms.resourceRequirements.on('change', (res) => {
-                    expect(res).to.deep.equal(options);
-                    _semaphore.callDone();
+                it('should delete specific algorithmQueue', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    await etcd.algorithms.algorithmQueue.delete(options);
+                    const etcdGet = await etcd.algorithms.algorithmQueue.get(options);
+                    expect(etcdGet).to.be.null;
                 });
-                await etcd.algorithms.resourceRequirements.set(options);
-                await _semaphore.done();
-            });
-            it('should single watch queue', async () => {
-                const options = { name: 'single-watch-alg', data: 'bla' };
-                const callback = sinon.spy();
-
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                await etcd1.algorithms.resourceRequirements.singleWatch(options);
-                etcd1.algorithms.resourceRequirements.on('change', callback);
-
-                await etcd2.algorithms.resourceRequirements.singleWatch(options);
-                etcd2.algorithms.resourceRequirements.on('change', callback);
-
-                await etcd.algorithms.resourceRequirements.set(options);
-                await delay(500);
-                expect(callback.callCount).to.be.equal(1);
-            });
-            it('should watch delete resourceRequirements', async () => {
-                const options = { name: 'delete-green-alg' };
-                await etcd.algorithms.resourceRequirements.watch(options);
-                etcd.algorithms.resourceRequirements.on('delete', (res) => {
-                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
-                    _semaphore.callDone();
+                it('should get algorithmQueue list', async () => {
+                    const options1 = { name: 'list-1-alg', data: 'bla' };
+                    const options2 = { name: 'list-2-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.set(options1);
+                    await etcd.algorithms.algorithmQueue.set(options2);
+                    const list = await etcd.algorithms.algorithmQueue.list({ name: 'list' });
+                    expect(list).to.have.lengthOf(2);
                 });
-                await etcd.algorithms.resourceRequirements.set(options);
-                await etcd.algorithms.resourceRequirements.delete(options);
-                await _semaphore.done();
             });
-            it('should get data when call to watch', async () => {
-                const options = { name: 'blue-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.set(options);
-                const etcdGet = await etcd.algorithms.resourceRequirements.watch(options);
-                expect(etcdGet).to.have.deep.keys(options);
-            });
-            it('should watch all resourceRequirements', async () => {
-                const options2 = { name: 'yellow-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.watch();
-                etcd.algorithms.resourceRequirements.on('change', (res) => {
-                    etcd.algorithms.resourceRequirements.unwatch();
-                    expect(res).to.deep.equal(options2);
-                    _semaphore.callDone();
+            describe('watch', () => {
+                it('should watch change algorithmQueue', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.watch(options);
+                    etcd.algorithms.algorithmQueue.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    await _semaphore.done();
                 });
-                await etcd.algorithms.resourceRequirements.set(options2);
-                await _semaphore.done();
-            });
-        });
-        describe('unwatch', () => {
-            it('should unwatch specific resourceRequirements', async () => {
-                let isCalled = false;
-                const options = { name: 'black-alg', data: 'bla' };
-                await etcd.algorithms.resourceRequirements.watch(options);
-                etcd.algorithms.resourceRequirements.on('change', (res) => {
-                    isCalled = true;
+                it('should single watch queue', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd();
+                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    const etcd2 = new Etcd();
+                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    await etcd1.algorithms.algorithmQueue.singleWatch(options);
+                    etcd1.algorithms.algorithmQueue.on('change', callback);
+
+                    await etcd2.algorithms.algorithmQueue.singleWatch(options);
+                    etcd2.algorithms.algorithmQueue.on('change', callback);
+
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    await delay(500);
+                    expect(callback.callCount).to.be.equal(1);
                 });
-                await etcd.algorithms.resourceRequirements.unwatch(options);
-                await etcd.algorithms.resourceRequirements.set(options);
-                await delay(500);
-                expect(isCalled).to.equal(false);
-            });
-        });
-    });
-    describe('PipelineDriverRequirements', () => {
-        describe('crud', () => {
-            it('should get/set specific resourceRequirement', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
-                expect(etcdGet).to.equal(options.data);
-            });
-            it('should delete specific resourceRequirement', async () => {
-                const options = { name: 'delete-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                await etcd.pipelineDrivers.resourceRequirements.delete(options);
-                const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
-                expect(etcdGet).to.be.null;
-            });
-            it('should get all resourceRequirements', async () => {
-                const options1 = { name: 'list-1-alg', data: 'bla' };
-                const options2 = { name: 'list-2-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.set(options1);
-                await etcd.pipelineDrivers.resourceRequirements.set(options2);
-                const list = await etcd.pipelineDrivers.resourceRequirements.list({ name: 'list' });
-                expect(list).to.have.lengthOf(2);
-            });
-        });
-        describe('watch', () => {
-            it('should watch change resourceRequirements', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.watch(options);
-                etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
-                    expect(res).to.deep.equal(options);
-                    _semaphore.callDone();
+                it('should watch delete algorithmQueue', async () => {
+                    const options = { name: 'delete-green-alg' };
+                    await etcd.algorithms.algorithmQueue.watch(options);
+                    etcd.algorithms.algorithmQueue.on('delete', (res) => {
+                        expect(res).to.deep.equal({ name: 'delete-green-alg' });
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    await etcd.algorithms.algorithmQueue.delete(options);
+                    await _semaphore.done();
                 });
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                await _semaphore.done();
-            });
-            it('should single watch queue', async () => {
-                const options = { name: 'single-watch-alg', data: 'bla' };
-                const callback = sinon.spy();
-
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                await etcd1.pipelineDrivers.resourceRequirements.singleWatch(options);
-                etcd1.pipelineDrivers.resourceRequirements.on('change', callback);
-
-                await etcd2.pipelineDrivers.resourceRequirements.singleWatch(options);
-                etcd2.pipelineDrivers.resourceRequirements.on('change', callback);
-
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                await delay(500);
-                expect(callback.callCount).to.be.equal(1);
-            });
-            it('should watch delete resourceRequirements', async () => {
-                const options = { name: 'delete-green-alg' };
-                await etcd.pipelineDrivers.resourceRequirements.watch(options);
-                etcd.pipelineDrivers.resourceRequirements.on('delete', (res) => {
-                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
-                    _semaphore.callDone();
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    const etcdGet = await etcd.algorithms.algorithmQueue.watch(options);
+                    expect(etcdGet).to.have.deep.keys(options);
                 });
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                await etcd.pipelineDrivers.resourceRequirements.delete(options);
-                await _semaphore.done();
-            });
-            it('should get data when call to watch', async () => {
-                const options = { name: 'blue-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                const etcdGet = await etcd.pipelineDrivers.resourceRequirements.watch(options);
-                expect(etcdGet).to.have.deep.keys(options);
-            });
-            it('should watch all resourceRequirements', async () => {
-                const options2 = { name: 'yellow-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.watch();
-                etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
-                    etcd.pipelineDrivers.resourceRequirements.unwatch();
-                    expect(res).to.deep.equal(options2);
-                    _semaphore.callDone();
+                it('should watch all algorithmQueue', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.watch();
+                    etcd.algorithms.algorithmQueue.on('change', (res) => {
+                        etcd.algorithms.algorithmQueue.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.algorithmQueue.set(options2);
+                    await _semaphore.done();
                 });
-                await etcd.pipelineDrivers.resourceRequirements.set(options2);
-                await _semaphore.done();
             });
-        });
-        describe('unwatch', () => {
-            it('should unwatch specific resourceRequirements', async () => {
-                let isCalled = false;
-                const options = { name: 'black-alg', data: 'bla' };
-                await etcd.pipelineDrivers.resourceRequirements.watch(options);
-                etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
-                    isCalled = true;
+            describe('unwatch', () => {
+                it('should unwatch specific algorithmQueue', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.algorithms.algorithmQueue.watch(options);
+                    etcd.algorithms.algorithmQueue.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.algorithmQueue.unwatch(options);
+                    await etcd.algorithms.algorithmQueue.set(options);
+                    await delay(500);
+                    expect(isCalled).to.equal(false);
                 });
-                await etcd.pipelineDrivers.resourceRequirements.unwatch(options);
-                await etcd.pipelineDrivers.resourceRequirements.set(options);
-                await delay(500);
-                expect(isCalled).to.equal(false);
-            });
-        });
-    });
-    describe('PipelineDriverQueue', () => {
-        describe('crud', () => {
-            it('should get/set specific queue', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.set(options);
-                const etcdGet = await etcd.pipelineDrivers.queue.get(options);
-                expect(etcdGet).to.deep.equal(options);
-            });
-            it('should delete specific queue', async () => {
-                const options = { name: 'delete-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.set(options);
-                await etcd.pipelineDrivers.queue.delete(options);
-                const etcdGet = await etcd.pipelineDrivers.queue.get(options);
-                expect(etcdGet).to.be.null;
-            });
-            it('should get all queue', async () => {
-                const options1 = { name: 'list-1-alg', data: 'bla' };
-                const options2 = { name: 'list-2-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.set(options1);
-                await etcd.pipelineDrivers.queue.set(options2);
-                const list = await etcd.pipelineDrivers.queue.list({ name: 'list' });
-                expect(list).to.have.lengthOf(2);
-            });
-        });
-        describe('watch', () => {
-            it('should watch change queue', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.watch(options);
-                etcd.pipelineDrivers.queue.on('change', (res) => {
-                    expect(res).to.deep.equal(options);
-                    _semaphore.callDone();
-                });
-                await etcd.pipelineDrivers.queue.set(options);
-                await _semaphore.done();
-            });
-            it('should single watch queue', async () => {
-                const options = { name: 'single-watch-alg', data: 'bla' };
-                const callback = sinon.spy();
-
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                await etcd1.pipelineDrivers.queue.singleWatch(options);
-                etcd1.pipelineDrivers.queue.on('change', callback);
-
-                await etcd2.pipelineDrivers.queue.singleWatch(options);
-                etcd2.pipelineDrivers.queue.on('change', callback);
-
-                await etcd.pipelineDrivers.queue.set(options);
-                await delay(500);
-                expect(callback.callCount).to.be.equal(1);
-            });
-            it('should watch delete queue', async () => {
-                const options = { name: 'delete-green-alg' };
-                await etcd.pipelineDrivers.queue.watch(options);
-                etcd.pipelineDrivers.queue.on('delete', (res) => {
-                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
-                    _semaphore.callDone();
-                });
-                await etcd.pipelineDrivers.queue.set(options);
-                await etcd.pipelineDrivers.queue.delete(options);
-                await _semaphore.done();
-            });
-            it('should get data when call to watch', async () => {
-                const options = { name: 'blue-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.set(options);
-                const etcdGet = await etcd.pipelineDrivers.queue.watch(options);
-                expect(etcdGet).to.have.deep.keys(options);
-            });
-            it('should watch all queue', async () => {
-                const options2 = { name: 'yellow-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.watch();
-                etcd.pipelineDrivers.queue.on('change', (res) => {
-                    etcd.pipelineDrivers.queue.unwatch();
-                    expect(res).to.deep.equal(options2);
-                    _semaphore.callDone();
-                });
-                await etcd.pipelineDrivers.queue.set(options2);
-                await _semaphore.done();
-            });
-        });
-        describe('unwatch', () => {
-            it('should unwatch specific queue', async () => {
-                let isCalled = false;
-                const options = { name: 'black-alg', data: 'bla' };
-                await etcd.pipelineDrivers.queue.watch(options);
-                etcd.pipelineDrivers.queue.on('change', (res) => {
-                    isCalled = true;
-                });
-                await etcd.pipelineDrivers.queue.unwatch(options);
-                await etcd.pipelineDrivers.queue.set(options);
-                await delay(500);
-                expect(isCalled).to.equal(false);
             });
         });
     });
-    describe('TemplatesStore', () => {
-        describe('crud', () => {
-            it('should get/set specific templatesStore', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.set(options);
-                const etcdGet = await etcd.algorithms.templatesStore.get(options);
-                expect(etcdGet).to.equal(options.data);
+    describe('PipelineDrives', () => {
+        describe('TemplatesStore', () => {
+            describe('crud', () => {
+                it('should get/set specific templatesStore', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    const etcdGet = await etcd.pipelineDrivers.templatesStore.get(options);
+                    expect(etcdGet).to.equal(options.data);
+                });
+                it('should delete specific templatesStore', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    const deleteRes = await etcd.pipelineDrivers.templatesStore.delete(options);
+                    const getRes = await etcd.pipelineDrivers.templatesStore.get(options);
+                    expect(getRes).to.be.null;
+                });
+                it('should get templatesStore list', async () => {
+                    const options1 = { name: 'list-1-alg', data: 'bla' };
+                    const options2 = { name: 'list-2-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.set(options1);
+                    await etcd.pipelineDrivers.templatesStore.set(options2);
+                    const list = await etcd.pipelineDrivers.templatesStore.list({ name: 'list' });
+                    expect(list).to.have.lengthOf(2);
+                });
             });
-            it('should delete specific templatesStore', async () => {
-                const options = { name: 'delete-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.set(options);
-                const deleteRes = await etcd.algorithms.templatesStore.delete(options);
-                const getRes = await etcd.algorithms.templatesStore.get(options);
-                expect(getRes).to.be.null;
+            describe('watch', () => {
+                it('should watch change templatesStore', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.watch(options);
+                    etcd.pipelineDrivers.templatesStore.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch templatesStore', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd();
+                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    const etcd2 = new Etcd();
+                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    await etcd1.pipelineDrivers.templatesStore.singleWatch(options);
+                    etcd1.pipelineDrivers.templatesStore.on('change', callback);
+
+                    await etcd2.pipelineDrivers.templatesStore.singleWatch(options);
+                    etcd2.pipelineDrivers.templatesStore.on('change', callback);
+
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    await delay(500);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete templatesStore', async () => {
+                    const options = { name: 'delete-green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.watch(options);
+                    etcd.pipelineDrivers.templatesStore.on('delete', (res) => {
+                        expect(res).to.deep.equal({ name: 'delete-green-alg' });
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    await etcd.pipelineDrivers.templatesStore.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    const etcdGet = await etcd.pipelineDrivers.templatesStore.watch(options);
+                    expect(etcdGet).to.have.deep.keys(options);
+                });
+                it('should watch all templatesStore', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.watch();
+                    etcd.pipelineDrivers.templatesStore.on('change', (res) => {
+                        etcd.pipelineDrivers.templatesStore.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.templatesStore.set(options2);
+                    await _semaphore.done();
+                });
             });
-            it('should get templatesStore list', async () => {
-                const options1 = { name: 'list-1-alg', data: 'bla' };
-                const options2 = { name: 'list-2-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.set(options1);
-                await etcd.algorithms.templatesStore.set(options2);
-                const list = await etcd.algorithms.templatesStore.list({ name: 'list' });
-                expect(list).to.have.lengthOf(2);
+            describe('unwatch', () => {
+                it('should unwatch specific templatesStore', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.templatesStore.watch(options);
+                    etcd.pipelineDrivers.templatesStore.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.pipelineDrivers.templatesStore.unwatch(options);
+                    await etcd.pipelineDrivers.templatesStore.set(options);
+                    await delay(500);
+                    expect(isCalled).to.equal(false);
+                });
             });
         });
-        describe('watch', () => {
-            it('should watch change templatesStore', async () => {
-                const options = { name: 'green-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.watch(options);
-                etcd.algorithms.templatesStore.on('change', (res) => {
-                    expect(res).to.deep.equal(options);
-                    _semaphore.callDone();
+        describe('ResourceRequirements', () => {
+            describe('crud', () => {
+                it('should get/set specific resourceRequirement', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
+                    expect(etcdGet).to.equal(options.data);
                 });
-                await etcd.algorithms.templatesStore.set(options);
-                await _semaphore.done();
-            });
-            it('should single watch templatesStore', async () => {
-                const options = { name: 'single-watch-alg', data: 'bla' };
-                const callback = sinon.spy();
-
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                await etcd1.algorithms.templatesStore.singleWatch(options);
-                etcd1.algorithms.templatesStore.on('change', callback);
-
-                await etcd2.algorithms.templatesStore.singleWatch(options);
-                etcd2.algorithms.templatesStore.on('change', callback);
-
-                await etcd.algorithms.templatesStore.set(options);
-                await delay(500);
-                expect(callback.callCount).to.be.equal(1);
-            });
-            it('should watch delete templatesStore', async () => {
-                const options = { name: 'delete-green-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.watch(options);
-                etcd.algorithms.templatesStore.on('delete', (res) => {
-                    expect(res).to.deep.equal({ name: 'delete-green-alg' });
-                    _semaphore.callDone();
+                it('should delete specific resourceRequirement', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    await etcd.pipelineDrivers.resourceRequirements.delete(options);
+                    const etcdGet = await etcd.pipelineDrivers.resourceRequirements.get(options);
+                    expect(etcdGet).to.be.null;
                 });
-                await etcd.algorithms.templatesStore.set(options);
-                await etcd.algorithms.templatesStore.delete(options);
-                await _semaphore.done();
-            });
-            it('should get data when call to watch', async () => {
-                const options = { name: 'blue-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.set(options);
-                const etcdGet = await etcd.algorithms.templatesStore.watch(options);
-                expect(etcdGet).to.have.deep.keys(options);
-            });
-            it('should watch all templatesStore', async () => {
-                const options2 = { name: 'yellow-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.watch();
-                etcd.algorithms.templatesStore.on('change', (res) => {
-                    etcd.algorithms.templatesStore.unwatch();
-                    expect(res).to.deep.equal(options2);
-                    _semaphore.callDone();
+                it('should get all resourceRequirements', async () => {
+                    const options1 = { name: 'list-1-alg', data: 'bla' };
+                    const options2 = { name: 'list-2-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.set(options1);
+                    await etcd.pipelineDrivers.resourceRequirements.set(options2);
+                    const list = await etcd.pipelineDrivers.resourceRequirements.list({ name: 'list' });
+                    expect(list).to.have.lengthOf(2);
                 });
-                await etcd.algorithms.templatesStore.set(options2);
-                await _semaphore.done();
+            });
+            describe('watch', () => {
+                it('should watch change resourceRequirements', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                    etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch queue', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd();
+                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    const etcd2 = new Etcd();
+                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    await etcd1.pipelineDrivers.resourceRequirements.singleWatch(options);
+                    etcd1.pipelineDrivers.resourceRequirements.on('change', callback);
+
+                    await etcd2.pipelineDrivers.resourceRequirements.singleWatch(options);
+                    etcd2.pipelineDrivers.resourceRequirements.on('change', callback);
+
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    await delay(500);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete resourceRequirements', async () => {
+                    const options = { name: 'delete-green-alg' };
+                    await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                    etcd.pipelineDrivers.resourceRequirements.on('delete', (res) => {
+                        expect(res).to.deep.equal({ name: 'delete-green-alg' });
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    await etcd.pipelineDrivers.resourceRequirements.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    const etcdGet = await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                    expect(etcdGet).to.have.deep.keys(options);
+                });
+                it('should watch all resourceRequirements', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.watch();
+                    etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
+                        etcd.pipelineDrivers.resourceRequirements.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.resourceRequirements.set(options2);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific resourceRequirements', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.resourceRequirements.watch(options);
+                    etcd.pipelineDrivers.resourceRequirements.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.pipelineDrivers.resourceRequirements.unwatch(options);
+                    await etcd.pipelineDrivers.resourceRequirements.set(options);
+                    await delay(500);
+                    expect(isCalled).to.equal(false);
+                });
             });
         });
-        describe('unwatch', () => {
-            it('should unwatch specific templatesStore', async () => {
-                let isCalled = false;
-                const options = { name: 'black-alg', data: 'bla' };
-                await etcd.algorithms.templatesStore.watch(options);
-                etcd.algorithms.templatesStore.on('change', (res) => {
-                    isCalled = true;
+        describe('Queue', () => {
+            describe('crud', () => {
+                it('should get/set specific queue', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.set(options);
+                    const etcdGet = await etcd.pipelineDrivers.queue.get(options);
+                    expect(etcdGet).to.deep.equal(options);
                 });
-                await etcd.algorithms.templatesStore.unwatch(options);
-                await etcd.algorithms.templatesStore.set(options);
-                await delay(500);
-                expect(isCalled).to.equal(false);
+                it('should delete specific queue', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.set(options);
+                    await etcd.pipelineDrivers.queue.delete(options);
+                    const etcdGet = await etcd.pipelineDrivers.queue.get(options);
+                    expect(etcdGet).to.be.null;
+                });
+                it('should get all queue', async () => {
+                    const options1 = { name: 'list-1-alg', data: 'bla' };
+                    const options2 = { name: 'list-2-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.set(options1);
+                    await etcd.pipelineDrivers.queue.set(options2);
+                    const list = await etcd.pipelineDrivers.queue.list({ name: 'list' });
+                    expect(list).to.have.lengthOf(2);
+                });
+            });
+            describe('watch', () => {
+                it('should watch change queue', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.watch(options);
+                    etcd.pipelineDrivers.queue.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.queue.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch queue', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd();
+                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    const etcd2 = new Etcd();
+                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+
+                    await etcd1.pipelineDrivers.queue.singleWatch(options);
+                    etcd1.pipelineDrivers.queue.on('change', callback);
+
+                    await etcd2.pipelineDrivers.queue.singleWatch(options);
+                    etcd2.pipelineDrivers.queue.on('change', callback);
+
+                    await etcd.pipelineDrivers.queue.set(options);
+                    await delay(500);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete queue', async () => {
+                    const options = { name: 'delete-green-alg' };
+                    await etcd.pipelineDrivers.queue.watch(options);
+                    etcd.pipelineDrivers.queue.on('delete', (res) => {
+                        expect(res).to.deep.equal({ name: 'delete-green-alg' });
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.queue.set(options);
+                    await etcd.pipelineDrivers.queue.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.set(options);
+                    const etcdGet = await etcd.pipelineDrivers.queue.watch(options);
+                    expect(etcdGet).to.have.deep.keys(options);
+                });
+                it('should watch all queue', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.watch();
+                    etcd.pipelineDrivers.queue.on('change', (res) => {
+                        etcd.pipelineDrivers.queue.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.pipelineDrivers.queue.set(options2);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific queue', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.pipelineDrivers.queue.watch(options);
+                    etcd.pipelineDrivers.queue.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.pipelineDrivers.queue.unwatch(options);
+                    await etcd.pipelineDrivers.queue.set(options);
+                    await delay(500);
+                    expect(isCalled).to.equal(false);
+                });
             });
         });
     });
