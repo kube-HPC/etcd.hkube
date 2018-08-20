@@ -5,7 +5,6 @@ const queryHelper = require('./lib/helper/query');
 class EtcdClient {
     constructor(options) {
         this.client = new Etcd3(options);
-        this._lease = null;
     }
 
     async get(path, { isPrefix = true } = {}) {
@@ -42,24 +41,6 @@ class EtcdClient {
 
     watch(path) {
         return this.client.watch().prefix(path).create();
-    }
-
-    lease(ttl, path, value) {
-        if (this._lease && this._lease.state === 0) {
-            throw new Error('cannot register twice');
-        }
-        this._ttl = ttl;
-        this._path = path;
-        this._lease = this.client.lease(this._ttl);
-        return this._updateLease(value);
-    }
-
-    updateLeaseData(value) {
-        return this._updateLease(value);
-    }
-
-    _updateLease(value) {
-        return this._lease.put(this._path).value(JSON.stringify(value));
     }
 
     async put(path, value) {

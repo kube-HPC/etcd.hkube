@@ -5,10 +5,9 @@ const sinon = require('sinon');
 const delay = require('await-delay');
 const uuidv4 = require('uuid/v4');
 const Etcd = require('../index');
-const { JobResult, JobStatus, Webhook } = require('../index');
+const { JobResult, JobStatus, Webhook, Watcher, Leaser } = require('../index');
 const Discovery = require('../lib/discovery/discovery');
 const triggersTreeExpected = require('./mocks/triggers-tree.json');
-const Watcher = require('../lib/watch/watcher');
 const Semaphore = require('await-done').semaphore;
 let etcd, _semaphore;
 const SERVICE_NAME = 'my-test-service';
@@ -221,32 +220,73 @@ describe('Tests', () => {
         it('should create lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const etcd = new Etcd();
-            etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-            await etcd._client.lease(10, key, value);
-            const lease = await etcd._client.get(key, { isPrefix: false });
+            const leaser = new Leaser(client);
+            await leaser.create(10, key, value);
+            const lease = await leaser.get(key);
+            expect(lease).to.deep.equal(value);
+        });
+        it('should create lease', async () => {
+            const key = `/leases/lease-${uuidv4()}`;
+            const value = { bla: 'bla' };
+            const leaser = new Leaser(client);
+            await leaser.create(10, key, value);
+            const lease = await leaser.get(key);
             expect(lease).to.deep.equal(value);
         });
         it('should update lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
-            const value = { bla1: 'bla' };
-            const value1 = { bla1: 'bla1' };
-            const value2 = { bla2: 'bla2' };
-            const value3 = { bla3: 'bla3' };
-            const value4 = { bla4: 'bla4' };
-            const value5 = { bla5: 'bla5' };
-            const etcd = new Etcd();
-            etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-            await etcd._client.lease(1, key, value);
-            await etcd._client.updateLeaseData(value1);
-            await etcd._client.updateLeaseData(value2);
-            await etcd._client.updateLeaseData(value3);
-            await etcd._client.updateLeaseData(value4);
-            await etcd._client.updateLeaseData(value5);
-
-            const lease = await etcd._client.get(key, { isPrefix: false });
-            expect(lease).to.deep.equal(value5);
-        }).timeout(5000);
+            const value1 = { bla: 'bla1' };
+            const value2 = { bla: 'bla2' };
+            const leaser = new Leaser(client);
+            await leaser.create(10, key, value1);
+            await leaser.update(value2);
+            const lease = await leaser.get(key);
+            expect(lease).to.deep.equal(value2);
+        });
+        it('should get leases', async () => {
+            const key = `/leases`;
+            const leaser = new Leaser(client);
+            const leases = await leaser.list(key);
+            expect(leases).to.be.an('array');
+        });
+        it('should release lease', async () => {
+            const key = `/leases/lease-${uuidv4()}`;
+            const value = { bla: 'bla' };
+            const leaser = new Leaser(client);
+            await leaser.create(10, key, value);
+            const leaseBefore = await leaser.get(key);
+            await leaser.release();
+            const leaseAfter = await leaser.get(key);
+            expect(leaseBefore).to.deep.equal(value);
+            expect(leaseAfter).to.deep.equal(value);
+        });
+        it('should revoke lease', async () => {
+            const key = `/leases/lease-${uuidv4()}`;
+            const value = { bla: 'bla' };
+            const leaser = new Leaser(client);
+            await leaser.create(10, key, value);
+            const leaseBefore = await leaser.get(key);
+            await leaser.revoke();
+            const leaseAfter = await leaser.get(key);
+            expect(leaseBefore).to.deep.equal(value);
+            expect(leaseAfter).to.be.null;
+        });
+        it('should lost lease', async () => {
+            const key = `/leases/lost-${uuidv4()}`;
+            const value1 = { bla: 'bla1' };
+            const value2 = { bla: 'bla2' };
+            const leaser = new Leaser(client);
+            await leaser.create(10, key, value1);
+            const lease1 = await leaser.get(key);
+            const spy = sinon.spy(leaser, 'create');
+            await leaser.revoke();
+            await leaser.update(value2);
+            await delay(500);
+            const lease2 = await leaser.get(key);
+            expect(spy.calledOnce).to.equal(true);
+            expect(lease1).to.deep.equal(value1);
+            expect(lease2).to.deep.equal(value2);
+        });
     });
     describe('Transaction', () => {
         it('should do a transaction and swap keys', async () => {
@@ -258,7 +298,7 @@ describe('Tests', () => {
             await etcd._client.put(key2, value2);
 
             try {
-                await etcd._client.client.stm({ retries: 0, isolation: 1 }).transact(tx => {
+                await client.stm({ retries: 0, isolation: 1 }).transact(tx => {
                     return Promise.all([
                         tx.get(key1),
                         tx.get(key2),
