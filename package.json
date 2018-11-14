@@ -1,6 +1,6 @@
 {
   "name": "@hkube/etcd",
-  "version": "4.0.24",
+  "version": "5.0.0",
   "description": "etcd infrastructure build for the hkube project",
   "main": "index.js",
   "scripts": {
@@ -21,6 +21,7 @@
     "djsv": "^3.0.3",
     "etcd3": "^0.2.11",
     "moment": "^2.22.1",
+    "string-template": "^1.0.0",
     "uuid": "^3.1.0"
   },
   "devDependencies": {

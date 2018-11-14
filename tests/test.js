@@ -11,105 +11,80 @@ const triggersTreeExpected = require('./mocks/triggers-tree.json');
 const Semaphore = require('await-done').semaphore;
 let etcd, _semaphore;
 const SERVICE_NAME = 'my-test-service';
+const config = { host: 'localhost', port: 4001, serviceName: SERVICE_NAME };
 
 describe('Tests', () => {
     beforeEach(() => {
-        etcd = new Etcd();
-        etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+        etcd = new Etcd(config);
         _semaphore = new Semaphore();
     });
     describe('Discovery', () => {
         describe('crud', () => {
             it('should update data in discovery', async () => {
+                const serviceName = `test-service-${uuidv4()}`;
                 const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery();
-                await discovery.init({
-                    serviceName: 'test-service-1',
-                    instanceId,
-                    client: etcd._client
-                });
-                await discovery.register({});
+                const etcd = new Etcd({ ...config, serviceName });
+                await etcd.discovery.register({ instanceId });
                 let expected = { foo: 'bar' };
-                await discovery.updateRegisteredData(expected);
-                const path = `/discovery/test-service-1/${instanceId}`;
-                let actual = await etcd._client.get(path);
-                expect(JSON.parse(actual[path])).to.eql(expected);
+                await etcd.discovery.updateRegisteredData(expected);
+                const path = `/discovery/${serviceName}/${instanceId}`;
+                let actual = await etcd._client.get(path, { isPrefix: false });
+                expect(actual).to.eql(expected);
 
                 expected = { foofoo: 'barbar' };
-                await discovery.updateRegisteredData(expected);
-                actual = await etcd._client.get(path);
-                expect(JSON.parse(actual[path])).to.eql(expected);
+                await etcd.discovery.updateRegisteredData(expected);
+                actual = await etcd._client.get(path, { isPrefix: false });
+                expect(actual).to.eql(expected);
             });
             it('should get data from discovery with serviceName', async () => {
-                const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery();
-                await discovery.init({
-                    serviceName: 'test-service-2',
-                    instanceId,
-                    client: etcd._client
-                });
-                await discovery.register();
-                const expected = { foo: 'bar' };
-                await discovery.updateRegisteredData(expected);
-                const actual = await discovery.get({
-                    serviceName: 'test-service-2',
-                    prefix: 'test-service',
-                    instanceId
-                });
+                const serviceName = `test-service-${uuidv4()}`;
+                const etcd = new Etcd({ ...config, serviceName });
+                await etcd.discovery.register();
+                const expected = { foonn: 'barrrr' };
+                await etcd.discovery.updateRegisteredData(expected);
+                const actual = await etcd.discovery.get();
                 expect(actual).to.eql(expected);
             });
             it('should get prefix data from discovery with serviceName', async () => {
+                const serviceName = `test-service-${uuidv4()}`;
                 const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery();
-                await discovery.init({
-                    serviceName: 'test-service-3',
-                    instanceId,
-                    client: etcd._client
-                });
-                await discovery.register({});
+                const etcd = new Etcd({ ...config, serviceName });
+                await etcd.discovery.register({ instanceId });
                 const expected = { foo: 'bar' };
-                await discovery.updateRegisteredData(expected);
-
-                const actual = await discovery.get({
-                    serviceName: 'test-service-3'
-                });
-                expect(actual).deep.include({ [`/discovery/test-service-3/${instanceId}`]: expected });
+                await etcd.discovery.updateRegisteredData(expected);
+                const actual = await etcd.discovery.get({ serviceName, instanceId });
+                expect(actual).to.eql(expected);
             });
-            it('should get prefix data from discovery with serviceName - multiple results', async () => {
-                const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery();
-                await discovery.init({
-                    serviceName: 'test-service-4',
-                    instanceId,
-                    client: etcd._client
-                });
-                await discovery.register({});
-                const expected = { foo: 'bar' };
-                await discovery.updateRegisteredData(expected);
-
-                const etcd2 = new Etcd();
-                await etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            it('should only able register once', async () => {
+                const serviceName = `test-service-${uuidv4()}`;
+                const etcd = new Etcd({ ...config, serviceName });
+                const result1 = await etcd.discovery.register();
+                const result2 = await etcd.discovery.register();
+                const result3 = await etcd.discovery.register();
+                expect(result1).to.be.not.null;
+                expect(result2).to.be.null;
+                expect(result3).to.be.null;
+            });
+            xit('should get prefix data from discovery with serviceName - multiple results', async () => {
+                const serviceName = `test-service-${uuidv4()}`;
+                const instanceId1 = `register-test-${uuidv4()}`;
                 const instanceId2 = `register-test-${uuidv4()}`;
+                const etcd1 = new Etcd({ ...config, serviceName });
+                const etcd2 = new Etcd({ ...config, serviceName });
+                const expected1 = { foo: 'bar' };
+                const expected2 = { foo: 'baz' };
+                await etcd1.discovery.register({ instanceId: instanceId1, data: expected1 });
+                await etcd2.discovery.register({ instanceId: instanceId2, data: expected2 });
 
-                const discovery2 = new Discovery();
-                await discovery2.init({
-                    serviceName: 'test-service-4',
-                    instanceId: instanceId2,
-                    client: etcd2._client
-                });
-                await discovery2.register({});
-                await discovery2.updateRegisteredData({ foo: 'baz' });
+                const path = `/discovery/${serviceName}`;
+                const actual = await etcd1._client.getByQuery(path);
 
-                const actual = await discovery.get({
-                    serviceName: 'test-service-4'
-                });
-                expect(actual).deep.include({ [`/discovery/test-service-4/${instanceId}`]: expected });
-                expect(actual).deep.include({ [`/discovery/test-service-4/${instanceId2}`]: { foo: 'baz' } });
+                expect(actual).deep.include({ [`/discovery/test-service-4/${instanceId}`]: expected1 });
+                expect(actual).deep.include({ [`/discovery/test-service-4/${instanceId2}`]: expected2 });
             });
             it('should get data from discovery without serviceName', async () => {
                 const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery();
-                await discovery.init({
+                const discovery = new Discovery({
                     serviceName: 'test-service',
                     instanceId,
                     client: etcd._client
@@ -125,8 +100,7 @@ describe('Tests', () => {
             });
             it('should get data from discovery with wrong serviceName', async () => {
                 const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery();
-                await discovery.init({
+                const discovery = new Discovery({
                     serviceName: 'test-service-5',
                     instanceId,
                     client: etcd._client
@@ -149,7 +123,6 @@ describe('Tests', () => {
                 etcd.discovery.on('change', (res) => {
                     etcd.discovery.removeAllListeners();
                     expect(res.instanceId).to.equal(instanceId);
-                    expect(res.serviceName).to.equal(SERVICE_NAME);
                     _semaphore.callDone();
                 });
                 await etcd.discovery.register({ instanceId });
@@ -189,7 +162,7 @@ describe('Tests', () => {
         it('should put and get large object', async () => {
             const array = [];
             const size = 1000;
-            for (var i = 0; i < size; i++) {
+            for (let i = 0; i < size; i++) {
                 array.push({ score: 70 });
             }
             await etcd._client.put('/test', array);
@@ -208,8 +181,7 @@ describe('Tests', () => {
         });
         it('should acquire and release lock2', async () => {
             const key = `/locks/lock-${uuidv4()}`;
-            const etcd = new Etcd();
-            etcd.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+            const etcd = new Etcd(config);
             const lock1 = await etcd._client.acquireLock(key);
             await etcd._client.releaseLock(lock1);
             const lock2 = await etcd._client.acquireLock(key);
@@ -371,11 +343,13 @@ describe('Tests', () => {
     });
     describe('Get/Set', () => {
         it('etcd set and get simple test', async () => {
-            const instanceId = `etcd-set-get-test-${uuidv4()}`;
-            const data = { data: { bla: 'bla' } };
-            await etcd.services.client.set({ data, instanceId });
-            const etcdGet = await etcd.services.client.get({ instanceId, prefix: 'services' });
-            expect(etcdGet.data).to.have.deep.keys(data.data);
+            const path = '/simple/test/path';
+            const data = { bla: 'bla' };
+            await etcd._client.put(path, data);
+            const get1 = await etcd._client.get(path, { isPrefix: false });
+            const get2 = await etcd._client.get(path, { isPrefix: true });
+            expect(get1).to.eql(data);
+            expect(get2).to.eql({ [path]: JSON.stringify(data) });
         });
         it('etcd sort with limit', async () => {
             const instanceId = `etcd-set-get-test-${uuidv4()}`;
@@ -389,76 +363,13 @@ describe('Tests', () => {
             expect(Object.keys(data).length).to.equal(6);
         });
     });
-    describe('Services', () => {
-        describe('get/set', () => {
-            it('should get without specific instanceId', async () => {
-                const data = { data: { bla: 'bla' } };
-                await etcd.services.client.set(data);
-                const etcdGet = await etcd.services.client.get({ prefix: 'services' });
-                expect(etcdGet).to.have.deep.keys(data.data);
-            });
-            it('should get without specific instanceId with suffix', async () => {
-                const suffix = 'test';
-                const data = { data: { bla: 'bla' } };
-                await etcd.services.client.set({ data, suffix });
-                const etcdGet = await etcd.services.client.get({ prefix: 'services', suffix });
-                expect(etcdGet.data).to.have.deep.keys(data.data);
-            });
-        });
-        describe('pipeline-driver', () => {
-            it('should set and get tasks', async () => {
-                const { pipelineDriver } = etcd.services;
-                const jobId = `jobid-${uuidv4()}`;
-                const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await pipelineDriver.setTaskState({ jobId, taskId, data });
-                const etcdGet = await pipelineDriver.getTaskState({ jobId, taskId });
-                expect(etcdGet).to.have.deep.keys(data);
-            });
-            it('should get list', async () => {
-                const { pipelineDriver } = etcd.services;
-                const taskId = `taskid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await pipelineDriver.setTaskState({ taskId, data });
-                const etcdGet = await pipelineDriver.getDriverTasks({ taskId });
-                expect(etcdGet[Object.keys(etcdGet)[0]]).to.have.deep.keys({ taskId, ...data });
-            });
-            it('should delete state', async () => {
-                const { pipelineDriver } = etcd.services;
-                const jobId = `jobid-${uuidv4()}`;
-                const data = { bla: 'bla' };
-                await pipelineDriver.setState({ jobId, data });
-                await pipelineDriver.deleteState({ jobId });
-                const etcdGet = await pipelineDriver.getState({ jobId });
-                expect(etcdGet).to.be.null;
-            });
-        });
-        describe('algorithm-queue', () => {
-            it('get', async () => {
-                const { algorithmQueue } = etcd.services;
-                const name = `algorithm-x-${uuidv4()}`;
-                const queue = { bla: 'bla' };
-                await algorithmQueue.store({ name, queue });
-                const etcdGet = await algorithmQueue.get({ name });
-                expect(etcdGet).to.have.deep.keys(queue);
-            });
-            it('store', async () => {
-                const { algorithmQueue } = etcd.services;
-                const name = `algorithm-x-${uuidv4()}`;
-                const queue = { bla: 'bla' };
-                await algorithmQueue.store({ name, queue });
-                const etcdGet = await algorithmQueue.get({ name });
-                expect(etcdGet).to.have.deep.keys(queue);
-            });
-        });
-    });
     describe('JobState', () => {
         describe('sets', () => {
             it('should set and get job state', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'started';
-                await etcd.jobState.setState({ state, jobId });
-                const etcdGet = await etcd.jobState.getState({ jobId });
+                await etcd.jobState.set({ data: state, jobId });
+                const etcdGet = await etcd.jobState.get({ jobId });
                 expect(etcdGet.state).to.equal(state);
             });
         });
@@ -470,18 +381,15 @@ describe('Tests', () => {
                 etcd.jobState.on('change', (res) => {
                     expect(res.state).to.equal(state);
                 });
-                etcd.jobState.setState({ state, jobId });
+                etcd.jobState.set({ data: state, jobId });
             });
             it('should single watch for job change', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const state = 'started';
                 const callback = sinon.spy();
 
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                const etcd1 = new Etcd(config);
+                const etcd2 = new Etcd(config);
 
                 await etcd1.jobState.singleWatch({ jobId });
                 etcd1.jobState.on('change', callback);
@@ -489,7 +397,7 @@ describe('Tests', () => {
                 await etcd2.jobState.singleWatch({ jobId });
                 etcd2.jobState.on('change', callback);
 
-                await etcd.jobState.setState({ state, jobId });
+                await etcd.jobState.set({ data: state, jobId });
                 await delay(500);
                 expect(callback.callCount).to.be.equal(1);
             });
@@ -504,7 +412,6 @@ describe('Tests', () => {
                 });
                 etcd.jobState.stop({ reason, jobId });
             });
-
             it('should watch stop all', async () => {
                 const callback = sinon.spy();
                 const state = 'stop';
@@ -527,7 +434,7 @@ describe('Tests', () => {
             it('should get watch object', async () => {
                 const state = 'started';
                 const jobId = `jobid-${uuidv4()}`;
-                await etcd.jobState.setState({ state, jobId });
+                await etcd.jobState.set({ data: state, jobId });
                 const object = await etcd.jobState.watch({ jobId });
                 expect(object).to.deep.equal({ state });
             });
@@ -543,7 +450,7 @@ describe('Tests', () => {
                     isCalled = true;
                 });
                 await etcd.jobState.unwatch({ jobId });
-                etcd.jobState.setState({ state, jobId });
+                etcd.jobState.set({ data: state, jobId });
                 await delay(500);
                 expect(isCalled).to.equal(false);
             });
@@ -611,10 +518,10 @@ describe('Tests', () => {
         describe('watch', () => {
             it('should watch for change job results', async () => {
                 const jobId = `jobid-${uuidv4()}`;
-                const data = { jobId, bla: 'bla' };
+                const data = { bla: 'bla' };
                 await etcd.jobResults.watch({ jobId });
                 etcd.jobResults.on('change', (res) => {
-                    expect(res).to.deep.equal(data);
+                    expect(res.data).to.deep.equal(data);
                     _semaphore.callDone();
                 });
                 await etcd.jobResults.set({ data, jobId });
@@ -625,11 +532,8 @@ describe('Tests', () => {
                 const data = { jobId, bla: 'bla' };
                 const callback = sinon.spy();
 
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                const etcd1 = new Etcd(config);
+                const etcd2 = new Etcd(config);
 
                 await etcd1.jobResults.singleWatch({ jobId });
                 etcd1.jobResults.on('change', callback);
@@ -664,7 +568,7 @@ describe('Tests', () => {
                     isCalled = true;
                 });
                 await etcd.jobResults.unwatch({ jobId });
-                etcd.jobResults.set({ state, jobId });
+                etcd.jobResults.set({ data: state, jobId });
                 await delay(500);
                 expect(isCalled).to.equal(false);
             });
@@ -749,13 +653,11 @@ describe('Tests', () => {
                 const data2 = { bla: 'bla2' };
                 const callback = sinon.spy();
 
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                const etcd1 = new Etcd(config);
                 await etcd1.jobStatus.singleWatch();
                 etcd1.jobStatus.on('change', callback);
 
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                const etcd2 = new Etcd(config);
                 await etcd2.jobStatus.singleWatch();
                 etcd2.jobStatus.on('change', callback);
 
@@ -792,7 +694,7 @@ describe('Tests', () => {
                     isCalled = true;
                 });
                 await etcd.jobStatus.unwatch({ jobId });
-                etcd.jobStatus.set({ state, jobId });
+                etcd.jobStatus.set({ data: state, jobId });
                 await delay(500);
                 expect(isCalled).to.equal(false);
             });
@@ -888,23 +790,23 @@ describe('Tests', () => {
             it('should set status', async () => {
                 const workerId = `workerid-${uuidv4()}`;
                 const status = { state: 'ready' };
-                await etcd.workers.setState({ workerId, status });
-                const actual = await etcd.workers.getState({ workerId });
+                await etcd.workers.set({ workerId, status });
+                const actual = await etcd.workers.get({ workerId });
                 expect(actual).to.eql({ status });
             });
             it('should delete specific worker', async () => {
                 const workerId = `workerid-${uuidv4()}`;
                 const status = { state: 'ready' };
-                await etcd.workers.setState({ workerId, status });
+                await etcd.workers.set({ workerId, status });
                 await etcd.workers.delete({ workerId });
-                const result = await etcd.workers.getState({ workerId });
+                const result = await etcd.workers.get({ workerId });
                 expect(result).to.be.null;
             });
             it('should set error', async () => {
                 const workerId = `workerid-${uuidv4()}`;
                 const error = { code: 'blah' };
-                await etcd.workers.setState({ workerId, error });
-                const actual = await etcd.workers.getState({ workerId });
+                await etcd.workers.set({ workerId, data: error });
+                const actual = await etcd.workers.get({ workerId });
                 expect(actual).to.eql({ error });
             });
         });
@@ -918,13 +820,13 @@ describe('Tests', () => {
                     await etcd.workers.unwatch({ workerId });
                     _semaphore.callDone();
                 });
-                await etcd.workers.setState({ workerId, status });
+                await etcd.workers.set({ workerId, data: status });
                 await _semaphore.done();
             });
             it('should return the set obj on watch', async () => {
                 const workerId = `workerid-${uuidv4()}`;
                 const status = { state: 'ready' };
-                await etcd.workers.setState({ workerId, status });
+                await etcd.workers.set({ workerId, data: status });
                 const actual = await etcd.workers.watch({ workerId });
                 expect(actual).to.eql({ status });
                 await etcd.workers.unwatch({ workerId });
@@ -945,43 +847,47 @@ describe('Tests', () => {
     });
     describe('Tasks', () => {
         describe('crud', () => {
-            const jobID = `jobid-${uuidv4()}`;
             it('should set results', async () => {
+                const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                await etcd.tasks.setState({
-                    jobId: jobID, taskId, status: data.status, result: data.result
+                await etcd.tasks.set({
+                    jobId, taskId, data: { status: data.status, result: data.result }
                 });
-                const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
+                const etcdGet = await etcd.tasks.get({ jobId, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('should set status', async () => {
+                const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
-                await etcd.tasks.setState({
-                    jobId: jobID, taskId, status: data.status, error: data.error
+                await etcd.tasks.set({
+                    jobId, taskId, data: { status: data.status, error: data.error }
                 });
-                const etcdGet = await etcd.tasks.getState({ jobId: jobID, taskId });
+                const etcdGet = await etcd.tasks.get({ jobId, taskId });
                 expect(etcdGet).to.have.deep.keys(data);
             });
             it('should get jobs tasks', async () => {
-                const taskId = `taskid-${uuidv4()}`;
+                const jobId = `jobid-${uuidv4()}`;
+                const taskId1 = `taskid-${uuidv4()}`;
+                const taskId2 = `taskid-${uuidv4()}`;
                 const data = { status: 'failed', error: 'stam error' };
-                await etcd.tasks.setState({
-                    jobId: jobID, taskId, status: data.status, error: data.error
+                await etcd.tasks.set({
+                    jobId, taskId: taskId1, data
                 });
-                await etcd.tasks.setState({
-                    jobId: jobID, taskId, status: data.status, error: data.error
+                await etcd.tasks.set({
+                    jobId, taskId: taskId2, data
                 });
-                const list = await etcd.tasks.list({ jobId: jobID });
+                const list = await etcd.tasks.list({ jobId });
                 const task = list.values().next();
                 expect(task.value).to.have.property('status');
             });
             it('should delete specific task', async () => {
+                const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
-                await etcd.tasks.setState({ jobId: jobID, taskId });
-                await etcd.tasks.delete({ jobId: jobID, taskId });
-                const result = await etcd.tasks.getState({ jobId: jobID, taskId });
+                await etcd.tasks.set({ jobId, taskId });
+                await etcd.tasks.delete({ jobId, taskId });
+                const result = await etcd.tasks.get({ jobId, taskId });
                 expect(result).to.be.null;
             });
         });
@@ -996,7 +902,7 @@ describe('Tests', () => {
                     await etcd.tasks.unwatch({ jobId, taskId });
                     _semaphore.callDone();
                 });
-                etcd.tasks.setState({
+                etcd.tasks.set({
                     jobId, taskId, status: data.status, result: data.result
                 });
                 await _semaphore.done();
@@ -1011,8 +917,8 @@ describe('Tests', () => {
                     expect(obj).to.have.deep.keys(res);
                     _semaphore.callDone();
                 });
-                etcd.tasks.setState({
-                    jobId, taskId, status: data.status, result: data.result
+                etcd.tasks.set({
+                    jobId, taskId, data: { status: data.status, result: data.result }
                 });
                 await _semaphore.done();
             });
@@ -1020,8 +926,8 @@ describe('Tests', () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const taskId = `taskid-${uuidv4()}`;
                 const data = { result: { bla: 'bla' }, status: 'complete' };
-                await etcd.tasks.setState({
-                    jobId, taskId, status: data.status, result: data.result
+                await etcd.tasks.set({
+                    jobId, taskId, data: { status: data.status, result: data.result }
                 });
                 const watch = await etcd.tasks.watch({ jobId, taskId });
                 expect(data).to.have.deep.keys(watch);
@@ -1048,8 +954,8 @@ describe('Tests', () => {
                     expect(data).to.have.deep.keys(res);
                 });
                 await etcd.tasks.unwatch({ jobId, taskId });
-                etcd.tasks.setState({
-                    jobId, taskId, status: data.status, result: data.result
+                etcd.tasks.set({
+                    jobId, taskId, data: { status: data.status, result: data.result }
                 });
             });
         });
@@ -1127,7 +1033,7 @@ describe('Tests', () => {
                     isCalled = true;
                 });
                 const res = await etcd.execution.unwatch({ jobId });
-                etcd.execution.set({ state, jobId });
+                etcd.execution.set({ data: state, jobId });
                 await delay(500);
                 expect(isCalled).to.equal(false);
             });
@@ -1176,11 +1082,8 @@ describe('Tests', () => {
                 const options = { name: 'single-watch-alg', data: 'bla' };
                 const callback = sinon.spy();
 
-                const etcd1 = new Etcd();
-                etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                const etcd2 = new Etcd();
-                etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                const etcd1 = new Etcd(config);
+                const etcd2 = new Etcd(config);
 
                 await etcd1.pipelines.singleWatch(options);
                 etcd1.pipelines.on('change', callback);
@@ -1258,11 +1161,8 @@ describe('Tests', () => {
                     const options = { name: 'single-watch-alg', data: 'bla' };
                     const callback = sinon.spy();
 
-                    const etcd1 = new Etcd();
-                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                    const etcd2 = new Etcd();
-                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
 
                     await etcd1.algorithms.templatesStore.singleWatch(options);
                     etcd1.algorithms.templatesStore.on('change', callback);
@@ -1357,11 +1257,8 @@ describe('Tests', () => {
                     const options = { name: 'single-watch-alg', data: 'bla' };
                     const callback = sinon.spy();
 
-                    const etcd1 = new Etcd();
-                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                    const etcd2 = new Etcd();
-                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
 
                     await etcd1.algorithms.resourceRequirements.singleWatch(options);
                     etcd1.algorithms.resourceRequirements.on('change', callback);
@@ -1456,11 +1353,8 @@ describe('Tests', () => {
                     const options = { name: 'single-watch-alg', data: 'bla' };
                     const callback = sinon.spy();
 
-                    const etcd1 = new Etcd();
-                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                    const etcd2 = new Etcd();
-                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
 
                     await etcd1.algorithms.algorithmQueue.singleWatch(options);
                     etcd1.algorithms.algorithmQueue.on('change', callback);
@@ -1557,11 +1451,8 @@ describe('Tests', () => {
                     const options = { name: 'single-watch-alg', data: 'bla' };
                     const callback = sinon.spy();
 
-                    const etcd1 = new Etcd();
-                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                    const etcd2 = new Etcd();
-                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
 
                     await etcd1.pipelineDrivers.templatesStore.singleWatch(options);
                     etcd1.pipelineDrivers.templatesStore.on('change', callback);
@@ -1656,11 +1547,8 @@ describe('Tests', () => {
                     const options = { name: 'single-watch-alg', data: 'bla' };
                     const callback = sinon.spy();
 
-                    const etcd1 = new Etcd();
-                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                    const etcd2 = new Etcd();
-                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
 
                     await etcd1.pipelineDrivers.resourceRequirements.singleWatch(options);
                     etcd1.pipelineDrivers.resourceRequirements.on('change', callback);
@@ -1755,11 +1643,8 @@ describe('Tests', () => {
                     const options = { name: 'single-watch-alg', data: 'bla' };
                     const callback = sinon.spy();
 
-                    const etcd1 = new Etcd();
-                    etcd1.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
-
-                    const etcd2 = new Etcd();
-                    etcd2.init({ etcd: { host: 'localhost', port: 4001 }, serviceName: SERVICE_NAME });
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
 
                     await etcd1.pipelineDrivers.queue.singleWatch(options);
                     etcd1.pipelineDrivers.queue.on('change', callback);

@@ -1,4 +1,4 @@
-module.exports = require('./client');
+module.exports = require('./lib/client');
 module.exports.Watcher = require('./lib/watch/watcher');
 module.exports.Leaser = require('./lib/lease/leaser');
 module.exports.JobResult = require('./lib/jobs/job-result');
