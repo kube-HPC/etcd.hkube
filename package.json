@@ -18,7 +18,7 @@
   "author": "maty zisserman",
   "license": "ISC",
   "dependencies": {
-    "djsv": "^3.0.3",
+    "ajv": "^6.5.5",
     "etcd3": "^0.2.11",
     "moment": "^2.22.1",
     "string-template": "^1.0.0",
