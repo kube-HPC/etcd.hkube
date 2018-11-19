@@ -13,8 +13,7 @@ const client = new Etcd3({ hosts: 'http://localhost:4001' });
 let etcd;
 let _semaphore;
 const SERVICE_NAME = 'my-test-service';
-const config = { host: 'localhost', port: 4001, serviceName: SERVICE_NAME };
-
+const config = { host: 'localhost', port: '4001', serviceName: SERVICE_NAME };
 
 describe('Tests', () => {
     beforeEach(() => {
@@ -156,7 +155,7 @@ describe('Tests', () => {
                 });
                 await etcd.discovery.unwatch();
                 await etcd.discovery.register({});
-                await delay(500);
+                await delay(100);
                 expect(isCalled).to.equal(false);
                 etcd.discovery.removeAllListeners();
             });
@@ -186,9 +185,9 @@ describe('Tests', () => {
         it('should acquire and release lock2', async () => {
             const key = `/locks/lock-${uuidv4()}`;
             const etcd = new Etcd(config);
-            const lock1 = await etcd._client.acquireLock(key);
-            await etcd._client.releaseLock(lock1);
-            const lock2 = await etcd._client.acquireLock(key);
+            const lock1 = await etcd._client.locker._acquireLock(key);
+            await etcd._client.locker._releaseLock(lock1);
+            const lock2 = await etcd._client.locker._acquireLock(key);
             expect(lock2.key).to.equal(key);
         });
     });
@@ -196,7 +195,7 @@ describe('Tests', () => {
         it('should create lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             await leaser.create(10, key, value);
             const lease = await leaser.get(key);
             expect(lease).to.deep.equal(value);
@@ -204,7 +203,7 @@ describe('Tests', () => {
         it('should create lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             await leaser.create(10, key, value);
             const lease = await leaser.get(key);
             expect(lease).to.deep.equal(value);
@@ -213,7 +212,7 @@ describe('Tests', () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value1 = { bla: 'bla1' };
             const value2 = { bla: 'bla2' };
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             await leaser.create(10, key, value1);
             await leaser.update(value2);
             const lease = await leaser.get(key);
@@ -221,14 +220,14 @@ describe('Tests', () => {
         });
         it('should get leases', async () => {
             const key = `/leases`;
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             const leases = await leaser.list(key);
             expect(leases).to.be.an('array');
         });
         it('should release lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             await leaser.create(10, key, value);
             const leaseBefore = await leaser.get(key);
             await leaser.release();
@@ -239,7 +238,7 @@ describe('Tests', () => {
         it('should revoke lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             await leaser.create(10, key, value);
             const leaseBefore = await leaser.get(key);
             await leaser.revoke();
@@ -251,13 +250,13 @@ describe('Tests', () => {
             const key = `/leases/lost-${uuidv4()}`;
             const value1 = { bla: 'bla1' };
             const value2 = { bla: 'bla2' };
-            const leaser = new Leaser(client);
+            const leaser = new Leaser({ client });
             await leaser.create(10, key, value1);
             const lease1 = await leaser.get(key);
             const spy = sinon.spy(leaser, 'create');
             await leaser.revoke();
             await leaser.update(value2);
-            await delay(500);
+            await delay(100);
             const lease2 = await leaser.get(key);
             expect(spy.calledOnce).to.equal(true);
             expect(lease1).to.deep.equal(value1);
@@ -356,14 +355,14 @@ describe('Tests', () => {
         });
         it('etcd sort with limit', async () => {
             const instanceId = `etcd-set-get-test-${uuidv4()}`;
-            for (let i = 0; i < 10; i++) {
-                await etcd._client.put(`${instanceId}/${i}`, { val: `val${i}` });
-                await delay(100);
-            }
-            await delay(200);
-            const data = await etcd._client.getSortLimit(`${instanceId}`, ['Mod', 'Ascend'], 6);
-            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val0');
-            expect(Object.keys(data).length).to.equal(6);
+            await etcd._client.put(`${instanceId}/1`, { val: 'val-1' });
+            await etcd._client.put(`${instanceId}/2`, { val: 'val-2' });
+            await etcd._client.put(`${instanceId}/3`, { val: 'val-3' });
+            await etcd._client.put(`${instanceId}/4`, { val: 'val-4' });
+            await etcd._client.put(`${instanceId}/5`, { val: 'val-5' });
+            const data = await etcd._client.getSortLimit(`${instanceId}`, ['Mod', 'Ascend'], 3);
+            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val-1');
+            expect(Object.keys(data).length).to.equal(3);
         });
     });
     describe('JobState', () => {
@@ -401,7 +400,7 @@ describe('Tests', () => {
                 etcd2.jobState.on('change', callback);
 
                 await etcd.jobState.set({ data: state, jobId });
-                await delay(500);
+                await delay(100);
                 expect(callback.callCount).to.be.equal(1);
             });
             it('should watch stop state', async () => {
@@ -461,7 +460,7 @@ describe('Tests', () => {
                 });
                 await etcd.jobState.unwatch({ jobId });
                 etcd.jobState.set({ data: state, jobId });
-                await delay(500);
+                await delay(100);
                 expect(isCalled).to.equal(false);
                 etcd.jobState.removeAllListeners();
             });
@@ -558,7 +557,7 @@ describe('Tests', () => {
                 etcd2.jobResults.on('change', callback);
 
                 await etcd.jobResults.set({ data, jobId });
-                await delay(500);
+                await delay(100);
                 expect(callback.callCount).to.be.equal(1);
             });
             it('should watch for delete job results', async () => {
@@ -585,7 +584,7 @@ describe('Tests', () => {
                 });
                 await etcd.jobResults.unwatch({ jobId });
                 etcd.jobResults.set({ data: state, jobId });
-                await delay(500);
+                await delay(100);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -651,22 +650,22 @@ describe('Tests', () => {
                 expect(list).to.have.lengthOf(limit);
                 expect(every).to.equal(true);
             });
-            it('should get executions tree', async () => {
+            xit('should get executions tree', async () => {
                 const prefix = '57ec5c39-122b-4d7c-bc8f-580ba30df511';
                 await Promise.all([
-                    etcd.jobStatus.set({ jobId: `${prefix}.a`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.e`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.e.f`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.g`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.i`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h.j.k.l`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h.j.k.o`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h.j.k.p`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.m`, data: { startTime: Date.now() } }),
-                    etcd.jobStatus.set({ jobId: `${prefix}.a.n`, data: { startTime: Date.now() } })
+                    etcd.jobStatus.set({ jobId: `${prefix}.a`, data: 'a' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c`, data: 'c' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d`, data: 'd' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.e`, data: 'e' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.e.f`, data: 'f' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.g`, data: 'g' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h`, data: 'h' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.i`, data: 'i' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h.j.k.l`, data: 'l' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h.j.k.o`, data: 'o' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.c.d.h.j.k.p`, data: 'p' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.b.m`, data: 'm' }),
+                    etcd.jobStatus.set({ jobId: `${prefix}.a.n`, data: 'n' })
                 ]);
                 const result = await etcd.jobStatus.getExecutionsTree({ jobId: `${prefix}.a` });
                 expect(result).to.deep.equal(triggersTreeExpected);
@@ -685,7 +684,6 @@ describe('Tests', () => {
                 await etcd.jobStatus.set({ data, jobId });
                 await _semaphore.done();
             });
-
             it('should single watch for change job status', async () => {
                 const jobId1 = `jobid-${uuidv4()}`;
                 const jobId2 = `jobid-${uuidv4()}`;
@@ -706,11 +704,10 @@ describe('Tests', () => {
                 await etcd.jobStatus.set({ data: data1, jobId: jobId1 });
                 await etcd.jobStatus.set({ data: data2, jobId: jobId2 });
 
-                await delay(2500);
+                await delay(100);
 
                 expect(callback.callCount).to.be.equal(4);
-            }).timeout(3000);
-
+            });
             it('should watch for delete job status', async () => {
                 const jobId = `jobid-${uuidv4()}`;
                 const data = { jobId, bla: 'bla' };
@@ -735,7 +732,7 @@ describe('Tests', () => {
                 });
                 await etcd.jobStatus.unwatch({ jobId });
                 await etcd.jobStatus.set({ data: state, jobId });
-                await delay(500);
+                await delay(100);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -822,7 +819,7 @@ describe('Tests', () => {
                 });
                 await etcd.webhooks.unwatch({ jobId });
                 await etcd.webhooks.set({ jobId, type, data: webhook });
-                await delay(500);
+                await delay(100);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -1039,7 +1036,7 @@ describe('Tests', () => {
                 });
                 await etcd.execution.unwatch({ jobId });
                 await etcd.execution.set({ data: state, jobId });
-                await delay(500);
+                await delay(100);
                 expect(isCalled).to.equal(false);
             });
         });
@@ -1099,7 +1096,7 @@ describe('Tests', () => {
                 etcd2.pipelines.on('change', callback);
 
                 await etcd.pipelines.set(options);
-                await delay(500);
+                await delay(200);
                 expect(callback.callCount).to.be.equal(1);
             });
             it('should watch delete specific pipeline', async () => {
@@ -1181,7 +1178,7 @@ describe('Tests', () => {
                     etcd2.algorithms.store.on('change', callback);
 
                     await etcd.algorithms.store.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete store', async () => {
@@ -1223,7 +1220,7 @@ describe('Tests', () => {
                     });
                     await etcd.algorithms.store.unwatch(options);
                     await etcd.algorithms.store.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(isCalled).to.equal(false);
                 });
             });
@@ -1278,7 +1275,7 @@ describe('Tests', () => {
                     etcd2.algorithms.requirements.on('change', callback);
 
                     await etcd.algorithms.requirements.set(options);
-                    await delay(500);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete resourceRequirements', async () => {
@@ -1320,7 +1317,7 @@ describe('Tests', () => {
                     });
                     await etcd.algorithms.requirements.unwatch(options);
                     await etcd.algorithms.requirements.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(isCalled).to.equal(false);
                 });
             });
@@ -1373,7 +1370,7 @@ describe('Tests', () => {
                     etcd2.algorithms.queue.on('change', callback);
 
                     await etcd.algorithms.queue.set(options);
-                    await delay(500);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete algorithmQueue', async () => {
@@ -1415,7 +1412,7 @@ describe('Tests', () => {
                     });
                     await etcd.algorithms.queue.unwatch(options);
                     await etcd.algorithms.queue.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(isCalled).to.equal(false);
                 });
             });
@@ -1472,7 +1469,7 @@ describe('Tests', () => {
                     etcd2.pipelineDrivers.store.on('change', callback);
 
                     await etcd.pipelineDrivers.store.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete store', async () => {
@@ -1514,7 +1511,7 @@ describe('Tests', () => {
                     });
                     await etcd.pipelineDrivers.store.unwatch(options);
                     await etcd.pipelineDrivers.store.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(isCalled).to.equal(false);
                 });
             });
@@ -1569,7 +1566,7 @@ describe('Tests', () => {
                     etcd2.pipelineDrivers.requirements.on('change', callback);
 
                     await etcd.pipelineDrivers.requirements.set(options);
-                    await delay(500);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete resourceRequirements', async () => {
@@ -1611,7 +1608,7 @@ describe('Tests', () => {
                     });
                     await etcd.pipelineDrivers.requirements.unwatch(options);
                     await etcd.pipelineDrivers.requirements.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(isCalled).to.equal(false);
                 });
             });
@@ -1665,7 +1662,7 @@ describe('Tests', () => {
                     etcd2.pipelineDrivers.queue.on('change', callback);
 
                     await etcd.pipelineDrivers.queue.set(options);
-                    await delay(500);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete queue', async () => {
@@ -1707,7 +1704,7 @@ describe('Tests', () => {
                     });
                     await etcd.pipelineDrivers.queue.unwatch(options);
                     await etcd.pipelineDrivers.queue.set(options);
-                    await delay(500);
+                    await delay(100);
                     expect(isCalled).to.equal(false);
                 });
             });
