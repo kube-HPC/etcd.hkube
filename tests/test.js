@@ -5,7 +5,7 @@ const delay = require('await-delay');
 const uuidv4 = require('uuid/v4');
 const Etcd = require('../index');
 const { JobResult, JobStatus, Webhook, Watcher, Leaser } = require('../index');
-const Discovery = require('../lib/discovery/discovery');
+const Discovery = require('../lib/entities/discovery/discovery');
 const triggersTreeExpected = require('./mocks/triggers-tree.json');
 const Semaphore = require('await-done').semaphore;
 
