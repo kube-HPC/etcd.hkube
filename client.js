@@ -10,6 +10,7 @@ const State = require('./lib/state/state');
 const Pipelines = require('./lib/pipelines/pipelines');
 const Execution = require('./lib/execution/execution');
 const RunningPipelines = require('./lib/execution/running-pipelines');
+const AlgorithmExecutions = require('./lib/algorithmExecutions/algorithmExecutions');
 const Workers = require('./lib/workers/workers');
 const Drivers = require('./lib/drivers/drivers');
 const { PipelineDriverQueue, PipelineDriverRequirements, PipelineDriverTemplatesStore } = require('./lib/pipeline-driver');
@@ -31,6 +32,7 @@ class Client {
         this.pipelines = new Pipelines();
         this.execution = new Execution();
         this.runningPipelines = new RunningPipelines();
+        this.algorithmExecutions = new AlgorithmExecutions();
         this.workers = new Workers();
         this.drivers = new Drivers();
         this.algorithms = {};
@@ -78,6 +80,7 @@ class Client {
             this.pipelines.init(data);
             this.execution.init(data);
             this.runningPipelines.init(data);
+            this.algorithmExecutions.init(data);
             this.algorithms.algorithmQueue.init(data);
             this.algorithms.resourceRequirements.init(data);
             this.algorithms.templatesStore.init(data);
