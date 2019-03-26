@@ -224,6 +224,298 @@ describe('Tests', () => {
             expect(Object.keys(data).length).to.equal(3);
         });
     });
+    describe('Algorithms', () => {
+        describe('Store', () => {
+            describe('crud', () => {
+                it('should get/set specific store', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.store.set(options);
+                    const etcdGet = await etcd.algorithms.store.get(options);
+                    expect(etcdGet).to.equal(options.data);
+                });
+                it('should delete specific store', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.algorithms.store.set(options);
+                    const deleteRes = await etcd.algorithms.store.delete(options);
+                    const getRes = await etcd.algorithms.store.get(options);
+                    expect(getRes).to.be.null;
+                });
+                it('should get store list', async () => {
+                    const name = 'list';
+                    const data = { name, data: 'bla' }
+                    await etcd.algorithms.store.set({ name: `${name}-1-alg`, data });
+                    await etcd.algorithms.store.set({ name: `${name}-2-alg`, data });
+                    const list = await etcd.algorithms.store.list({ name });
+                    const every = list.every(l => l.name.startsWith(name));
+                    expect(every).to.equal(true);
+                    expect(list).to.have.lengthOf(2);
+                });
+            });
+            describe('watch', () => {
+                it('should watch change store', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.store.watch(options);
+                    etcd.algorithms.store.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.store.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch store', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
+
+                    await etcd1.algorithms.store.singleWatch(options);
+                    etcd1.algorithms.store.on('change', callback);
+
+                    await etcd2.algorithms.store.singleWatch(options);
+                    etcd2.algorithms.store.on('change', callback);
+
+                    await etcd.algorithms.store.set(options);
+                    await delay(100);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete store', async () => {
+                    const options = { name: 'delete-green-alg', data: 'bla' };
+                    await etcd.algorithms.store.watch(options);
+                    etcd.algorithms.store.on('delete', (res) => {
+                        expect(res.name).to.eql(options.name);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.store.set(options);
+                    await etcd.algorithms.store.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.algorithms.store.set(options);
+                    const etcdGet = await etcd.algorithms.store.watch(options);
+                    expect(etcdGet).to.eql(options.data);
+                });
+                it('should watch all store', async () => {
+                    const options = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.algorithms.store.watch();
+                    etcd.algorithms.store.on('change', (res) => {
+                        etcd.algorithms.store.unwatch();
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.store.set(options);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific store', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.algorithms.store.watch(options);
+                    etcd.algorithms.store.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.store.unwatch(options);
+                    await etcd.algorithms.store.set(options);
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
+            });
+        });
+        describe('Requirements', () => {
+            describe('crud', () => {
+                it('should get/set specific resourceRequirement', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.requirements.set(options);
+                    const etcdGet = await etcd.algorithms.requirements.get(options);
+                    expect(etcdGet).to.equal(options.data);
+                });
+                it('should delete specific resourceRequirement', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.algorithms.requirements.set(options);
+                    await etcd.algorithms.requirements.delete(options);
+                    const etcdGet = await etcd.algorithms.requirements.get(options);
+                    expect(etcdGet).to.be.null;
+                });
+                it('should get all resourceRequirements', async () => {
+                    const name = 'list';
+                    await etcd.algorithms.requirements.set({ name: `${name}-1-alg`, data: 'bla' });
+                    await etcd.algorithms.requirements.set({ name: `${name}-2-alg`, data: 'bla' });
+                    const list = await etcd.algorithms.requirements.list({ name });
+                    const every = list.every(l => l.name.startsWith(name));
+                    expect(every).to.equal(true);
+                    expect(list).to.have.lengthOf(2);
+                });
+            });
+            describe('watch', () => {
+                it('should watch change resourceRequirements', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.requirements.watch(options);
+                    etcd.algorithms.requirements.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.requirements.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch queue', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
+
+                    await etcd1.algorithms.requirements.singleWatch(options);
+                    etcd1.algorithms.requirements.on('change', callback);
+
+                    await etcd2.algorithms.requirements.singleWatch(options);
+                    etcd2.algorithms.requirements.on('change', callback);
+
+                    await etcd.algorithms.requirements.set(options);
+                    await delay(200);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete resourceRequirements', async () => {
+                    const options = { name: 'delete-green-alg' };
+                    await etcd.algorithms.requirements.watch(options);
+                    etcd.algorithms.requirements.on('delete', (res) => {
+                        expect(res.name).to.eql(options.name);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.requirements.set(options);
+                    await etcd.algorithms.requirements.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.algorithms.requirements.set(options);
+                    const etcdGet = await etcd.algorithms.requirements.watch(options);
+                    expect(etcdGet).to.eql(options.data);
+                });
+                it('should watch all resourceRequirements', async () => {
+                    const options2 = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.algorithms.requirements.watch();
+                    etcd.algorithms.requirements.on('change', (res) => {
+                        etcd.algorithms.requirements.unwatch();
+                        expect(res).to.deep.equal(options2);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.requirements.set(options2);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific resourceRequirements', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.algorithms.requirements.watch(options);
+                    etcd.algorithms.requirements.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.requirements.unwatch(options);
+                    await etcd.algorithms.requirements.set(options);
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
+            });
+        });
+        describe('Queue', () => {
+            describe('crud', () => {
+                it('should get and set specific algorithmQueue', async () => {
+                    const options = { name: 'get-alg', data: 'bla' };
+                    await etcd.algorithms.queue.set(options);
+                    const etcdGet = await etcd.algorithms.queue.get(options);
+                    expect(etcdGet).to.eql(options.data);
+                });
+                it('should delete specific algorithmQueue', async () => {
+                    const options = { name: 'delete-alg', data: 'bla' };
+                    await etcd.algorithms.queue.set(options);
+                    await etcd.algorithms.queue.delete(options);
+                    const etcdGet = await etcd.algorithms.queue.get(options);
+                    expect(etcdGet).to.be.null;
+                });
+                it('should get algorithmQueue list', async () => {
+                    const name = 'list';
+                    await etcd.algorithms.queue.set({ name: `${name}-1-alg`, data: 'bla' });
+                    await etcd.algorithms.queue.set({ name: `${name}-2-alg`, data: 'bla' });
+                    const list = await etcd.algorithms.queue.list({ name });
+                    expect(list).to.have.lengthOf(2);
+                });
+            });
+            describe('watch', () => {
+                it('should watch change algorithmQueue', async () => {
+                    const options = { name: 'green-alg', data: 'bla' };
+                    await etcd.algorithms.queue.watch(options);
+                    etcd.algorithms.queue.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.queue.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch queue', async () => {
+                    const options = { name: 'single-watch-alg', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
+
+                    await etcd1.algorithms.queue.singleWatch(options);
+                    etcd1.algorithms.queue.on('change', callback);
+
+                    await etcd2.algorithms.queue.singleWatch(options);
+                    etcd2.algorithms.queue.on('change', callback);
+
+                    await etcd.algorithms.queue.set(options);
+                    await delay(200);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete algorithmQueue', async () => {
+                    const options = { name: 'delete-green-alg' };
+                    await etcd.algorithms.queue.watch(options);
+                    etcd.algorithms.queue.on('delete', (res) => {
+                        expect(res.name).to.eql(options.name);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.queue.set(options);
+                    await etcd.algorithms.queue.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', data: 'bla' };
+                    await etcd.algorithms.queue.set(options);
+                    const etcdGet = await etcd.algorithms.queue.watch(options);
+                    expect(etcdGet).to.eql(options.data);
+                });
+                it('should watch all algorithmQueue', async () => {
+                    const options = { name: 'yellow-alg', data: 'bla' };
+                    await etcd.algorithms.queue.watch();
+                    etcd.algorithms.queue.on('change', (res) => {
+                        etcd.algorithms.queue.unwatch();
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.queue.set(options);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific algorithmQueue', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', data: 'bla' };
+                    await etcd.algorithms.queue.watch(options);
+                    etcd.algorithms.queue.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.queue.unwatch(options);
+                    await etcd.algorithms.queue.set(options);
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
+            });
+        });
+    });
     describe('Discovery', () => {
         describe('crud', () => {
             it('should update data in discovery', async () => {
@@ -365,236 +657,125 @@ describe('Tests', () => {
             });
         });
     });
-    describe('Pipelines', () => {
-        describe('crud', () => {
-            it('should set results', async () => {
-                const name = 'pipeline-test';
-                const data = { bla: 'bla' };
-                await etcd.pipelines.set({ name, data });
-                const etcdGet = await etcd.pipelines.get({ name });
-                expect(etcdGet).to.have.deep.keys(data);
+    describe('Executions', () => {
+        describe('Stored', () => {
+            describe('crud', () => {
+                it('should set and get execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = {
+                        name: 'execution',
+                        webhook: {
+                            progressHook: 'string',
+                            resultHook: 'string'
+                        }
+                    };
+                    await etcd.executions.stored.set({ jobId, data });
+                    const result = await etcd.executions.stored.get({ jobId });
+                    expect(result).to.have.deep.keys(data);
+                });
+                it('should delete specific execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = {
+                        name: 'execution',
+                        webhook: {
+                            progressHook: 'string',
+                            resultHook: 'string'
+                        }
+                    };
+                    await etcd.executions.stored.set({ jobId, data });
+                    await etcd.executions.stored.delete({ jobId });
+                    const result = await etcd.executions.stored.get({ jobId });
+                    expect(result).to.be.null;
+                });
             });
-            it('should delete pipeline', async () => {
-                const name = 'pipeline-delete';
-                const data = { bla: 'bla' };
-                await etcd.pipelines.set({ name, data });
-                await etcd.pipelines.delete({ name });
-                const etcdGet = await etcd.pipelines.get({ name });
-                expect(etcdGet).to.be.null;
+            describe('watch', () => {
+                it('should watch execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = { jobId, bla: 'bla' };
+                    await etcd.executions.stored.watch({ jobId });
+                    etcd.executions.stored.on('change', (res) => {
+                        expect(res.jobId).to.deep.equal(jobId);
+                        expect(res.data).to.deep.equal(data);
+                        _semaphore.callDone();
+                    });
+                    await etcd.executions.stored.set({ data, jobId });
+                    await _semaphore.done();
+                });
             });
-            it('should get pipeline list', async () => {
-                const name = 'pipeline-list';
-                const data = { bla: 'bla' };
-                await etcd.pipelines.set({ name: `${name}-1`, data });
-                await etcd.pipelines.set({ name: `${name}-2`, data });
-                const list = await etcd.pipelines.list({ name });
-                const every = list.every(l => l.name.startsWith(name));
-                expect(every).to.equal(true);
-                expect(list).to.have.lengthOf(2);
+            describe('unwatch', () => {
+                it('should unwatch execution', async () => {
+                    let isCalled = false;
+                    const state = 'started';
+                    const jobId = `jobid-${uuidv4()}`;
+                    await etcd.executions.stored.watch({ jobId });
+                    etcd.jobs.results.on('change', () => {
+                        isCalled = true;
+                    });
+                    await etcd.executions.stored.unwatch({ jobId });
+                    await etcd.executions.stored.set({ data: state, jobId });
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
             });
         });
-        describe('watch', () => {
-            it('should watch set specific pipeline', async () => {
-                const name = 'pipeline-watch';
-                const data = { name, bla: 'bla' };
-                await etcd.pipelines.watch({ name });
-                etcd.pipelines.on('change', (res) => {
-                    expect(res.name).to.eql(name);
-                    expect(res.data).to.eql(data);
-                    _semaphore.callDone();
+        describe('Running', () => {
+            describe('crud', () => {
+                it('should set and get execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = {
+                        name: 'execution',
+                        webhook: {
+                            progressHook: 'string',
+                            resultHook: 'string'
+                        }
+                    };
+                    await etcd.executions.running.set({ jobId, data });
+                    const result = await etcd.executions.running.get({ jobId });
+                    expect(result).to.have.deep.keys(data);
                 });
-                await etcd.pipelines.set({ name, data });
-                await _semaphore.done();
-            });
-            it('should single watch queue', async () => {
-                const options = { name: 'single-watch-alg', data: 'bla' };
-                const callback = sinon.spy();
-
-                const etcd1 = new Etcd(config);
-                const etcd2 = new Etcd(config);
-
-                await etcd1.pipelines.singleWatch(options);
-                etcd1.pipelines.on('change', callback);
-
-                await etcd2.pipelines.singleWatch(options);
-                etcd2.pipelines.on('change', callback);
-
-                await etcd.pipelines.set(options);
-                await delay(200);
-                expect(callback.callCount).to.be.equal(1);
-            });
-            it('should watch delete specific pipeline', async () => {
-                const name = 'pipeline-2';
-                const data = { name, bla: 'bla' };
-                await etcd.pipelines.watch({ name });
-                etcd.pipelines.on('delete', (res) => {
-                    expect(res.name).to.eql(name);
-                    _semaphore.callDone();
+                it('should delete specific execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = {
+                        name: 'execution',
+                        webhook: {
+                            progressHook: 'string',
+                            resultHook: 'string'
+                        }
+                    };
+                    await etcd.executions.running.set({ jobId, data });
+                    await etcd.executions.running.delete({ jobId });
+                    const result = await etcd.executions.running.get({ jobId });
+                    expect(result).to.be.null;
                 });
-                await etcd.pipelines.set({ name, data });
-                await etcd.pipelines.delete({ name });
-                await _semaphore.done();
             });
-            it('should watch all pipelines', async () => {
-                const name = 'pipeline-3';
-                const data = { name, bla: 'bla' };
-                await etcd.pipelines.watch();
-                etcd.pipelines.on('change', (res) => {
-                    etcd.pipelines.unwatch();
-                    expect(res.name).to.eql(name);
-                    expect(res.data).to.eql(data);
-                    _semaphore.callDone();
+            describe('watch', () => {
+                it('should watch execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = { jobId, bla: 'bla' };
+                    await etcd.executions.running.watch({ jobId });
+                    etcd.executions.running.on('change', (res) => {
+                        expect(res.jobId).to.deep.equal(jobId);
+                        expect(res.data).to.deep.equal(data);
+                        _semaphore.callDone();
+                    });
+                    await etcd.executions.running.set({ data, jobId });
+                    await _semaphore.done();
                 });
-                await etcd.pipelines.set({ name, data });
-                await _semaphore.done();
             });
-        });
-    });
-    describe('Webhooks', () => {
-        describe('crud', () => {
-            it('should set and get webhook', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const pipelineStatus = 'pending';
-                const type = 'results';
-                await etcd.webhooks.set({ jobId, type, data: new Webhook({ pipelineStatus }) });
-                const result = await etcd.webhooks.get({ jobId, type });
-                expect(result).to.have.property('timestamp');
-                expect(result).to.have.property('pipelineStatus');
-            });
-            it('should delete specific webhook', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const pipelineStatus = 'pending';
-                const type = 'results';
-                await etcd.webhooks.set({ jobId, type, data: new Webhook({ pipelineStatus }) });
-                await etcd.webhooks.delete({ jobId, type });
-                const result = await etcd.webhooks.get({ jobId });
-                expect(result).to.be.null;
-            });
-            it('should set and get webhook list', async () => {
-                const jobId = 'jobs-list';
-                const pipelineStatus = 'pending';
-                const order = 'Mod';
-                const sort = 'asc';
-                const limit = 3;
-                await etcd.webhooks.set({ jobId: `${jobId}-1`, type: 'results', data: new Webhook({ pipelineStatus }) });
-                await etcd.webhooks.set({ jobId: `${jobId}-2`, type: 'progress', data: new Webhook({ pipelineStatus }) });
-                await etcd.webhooks.set({ jobId: `${jobId}-3`, type: 'error', data: new Webhook({ pipelineStatus }) });
-                await etcd.webhooks.set({ jobId: `${jobId}-4`, type: 'step', data: new Webhook({ pipelineStatus }) });
-                await etcd.webhooks.set({ jobId: `${jobId}-5`, type: 'bla', data: new Webhook({ pipelineStatus }) });
-                const list = await etcd.webhooks.list({ jobId: 'jobs-list', order, sort, limit });
-                const every = list.every(l => l.jobId.startsWith(jobId));
-                expect(every).to.equal(true);
-                expect(list).to.have.lengthOf(limit);
-            });
-        });
-        describe('watch', () => {
-            it('should watch webhook results', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const pipelineStatus = 'pending';
-                const type = 'results';
-                const webhook = new Webhook({ pipelineStatus });
-                await etcd.webhooks.watch({ jobId });
-                etcd.webhooks.on('change', (result) => {
-                    expect(result).to.have.property('jobId');
-                    expect(result.data).to.have.property('timestamp');
-                    expect(result.data).to.have.property('pipelineStatus');
-                    _semaphore.callDone();
+            describe('unwatch', () => {
+                it('should unwatch execution', async () => {
+                    let isCalled = false;
+                    const state = 'started';
+                    const jobId = `jobid-${uuidv4()}`;
+                    await etcd.executions.running.watch({ jobId });
+                    etcd.jobs.results.on('change', () => {
+                        isCalled = true;
+                    });
+                    await etcd.executions.running.unwatch({ jobId });
+                    await etcd.executions.running.set({ data: state, jobId });
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
                 });
-                await etcd.webhooks.set({ jobId, type, data: webhook });
-                await _semaphore.done();
-            });
-            it('should watch webhook progress', async () => {
-                const jobId = `jobid-${uuidv4()}`;
-                const pipelineStatus = 'pending';
-                const type = 'progress';
-                const webhook = new Webhook({ pipelineStatus });
-                await etcd.webhooks.watch({ jobId });
-                etcd.webhooks.on('change', (result) => {
-                    expect(result).to.have.property('jobId');
-                    expect(result.data).to.have.property('timestamp');
-                    expect(result.data).to.have.property('pipelineStatus');
-                    _semaphore.callDone();
-                });
-                await etcd.webhooks.set({ jobId, type, data: webhook });
-                await _semaphore.done();
-            });
-        });
-        describe('unwatch', () => {
-            it('should unwatch webhook results', async () => {
-                let isCalled = false;
-                const jobId = `jobid-${uuidv4()}`;
-                const pipelineStatus = 'pending';
-                const type = 'results';
-                const webhook = new Webhook({ pipelineStatus });
-                await etcd.webhooks.watch({ jobId });
-                etcd.webhooks.on('change', () => {
-                    isCalled = true;
-                });
-                await etcd.webhooks.unwatch({ jobId });
-                await etcd.webhooks.set({ jobId, type, data: webhook });
-                await delay(100);
-                expect(isCalled).to.equal(false);
-            });
-        });
-    });
-    describe('Workers', () => {
-        describe('crud', () => {
-            it('should set status', async () => {
-                const workerId = `workerid-${uuidv4()}`;
-                const status = { state: 'ready' };
-                await etcd.workers.set({ workerId, data: status });
-                const actual = await etcd.workers.get({ workerId });
-                expect(actual).to.eql(status);
-            });
-            it('should delete specific worker', async () => {
-                const workerId = `workerid-${uuidv4()}`;
-                const status = { state: 'ready' };
-                await etcd.workers.set({ workerId, data: status });
-                await etcd.workers.delete({ workerId });
-                const result = await etcd.workers.get({ workerId });
-                expect(result).to.be.null;
-            });
-            it('should set error', async () => {
-                const workerId = `workerid-${uuidv4()}`;
-                const error = { code: 'blah' };
-                await etcd.workers.set({ workerId, data: error });
-                const actual = await etcd.workers.get({ workerId });
-                expect(actual).to.eql(error);
-            });
-        });
-        describe('watch', () => {
-            it('should watch key', async () => {
-                const workerId = `workerid-${uuidv4()}`;
-                const status = { state: 'ready' };
-                await etcd.workers.watch({ workerId });
-                etcd.workers.on('change', async (res) => {
-                    expect(res.workerId).to.eql(workerId);
-                    expect(res.data).to.eql(status);
-                    await etcd.workers.unwatch({ workerId });
-                    _semaphore.callDone();
-                });
-                await etcd.workers.set({ workerId, data: status });
-                await _semaphore.done();
-            });
-            it('should return the set obj on watch', async () => {
-                const workerId = `workerid-${uuidv4()}`;
-                const status = { state: 'ready' };
-                await etcd.workers.set({ workerId, data: status });
-                const actual = await etcd.workers.watch({ workerId });
-                expect(actual).to.eql(status);
-                await etcd.workers.unwatch({ workerId });
-            });
-            it('should throw error if watch on worker already exists', async () => {
-                const workerId = `workerid-${uuidv4()}`;
-                await etcd.workers.watch({ workerId });
-                try {
-                    await etcd.workers.watch({ workerId });
-                }
-                catch (error) {
-                    expect(error.message).to.equals(`already watching on /workers/${workerId}`);
-                    _semaphore.callDone();
-                }
-                await _semaphore.done();
             });
         });
     });
@@ -1068,420 +1249,6 @@ describe('Tests', () => {
             });
         });
     });
-    describe('Executions', () => {
-        describe('Stored', () => {
-            describe('crud', () => {
-                it('should set and get execution', async () => {
-                    const jobId = `jobid-${uuidv4()}`;
-                    const data = {
-                        name: 'execution',
-                        webhook: {
-                            progressHook: 'string',
-                            resultHook: 'string'
-                        }
-                    };
-                    await etcd.executions.stored.set({ jobId, data });
-                    const result = await etcd.executions.stored.get({ jobId });
-                    expect(result).to.have.deep.keys(data);
-                });
-                it('should delete specific execution', async () => {
-                    const jobId = `jobid-${uuidv4()}`;
-                    const data = {
-                        name: 'execution',
-                        webhook: {
-                            progressHook: 'string',
-                            resultHook: 'string'
-                        }
-                    };
-                    await etcd.executions.stored.set({ jobId, data });
-                    await etcd.executions.stored.delete({ jobId });
-                    const result = await etcd.executions.stored.get({ jobId });
-                    expect(result).to.be.null;
-                });
-            });
-            describe('watch', () => {
-                it('should watch execution', async () => {
-                    const jobId = `jobid-${uuidv4()}`;
-                    const data = { jobId, bla: 'bla' };
-                    await etcd.executions.stored.watch({ jobId });
-                    etcd.executions.stored.on('change', (res) => {
-                        expect(res.jobId).to.deep.equal(jobId);
-                        expect(res.data).to.deep.equal(data);
-                        _semaphore.callDone();
-                    });
-                    await etcd.executions.stored.set({ data, jobId });
-                    await _semaphore.done();
-                });
-            });
-            describe('unwatch', () => {
-                it('should unwatch execution', async () => {
-                    let isCalled = false;
-                    const state = 'started';
-                    const jobId = `jobid-${uuidv4()}`;
-                    await etcd.executions.stored.watch({ jobId });
-                    etcd.jobs.results.on('change', () => {
-                        isCalled = true;
-                    });
-                    await etcd.executions.stored.unwatch({ jobId });
-                    await etcd.executions.stored.set({ data: state, jobId });
-                    await delay(100);
-                    expect(isCalled).to.equal(false);
-                });
-            });
-        });
-        describe('Running', () => {
-            describe('crud', () => {
-                it('should set and get execution', async () => {
-                    const jobId = `jobid-${uuidv4()}`;
-                    const data = {
-                        name: 'execution',
-                        webhook: {
-                            progressHook: 'string',
-                            resultHook: 'string'
-                        }
-                    };
-                    await etcd.executions.running.set({ jobId, data });
-                    const result = await etcd.executions.running.get({ jobId });
-                    expect(result).to.have.deep.keys(data);
-                });
-                it('should delete specific execution', async () => {
-                    const jobId = `jobid-${uuidv4()}`;
-                    const data = {
-                        name: 'execution',
-                        webhook: {
-                            progressHook: 'string',
-                            resultHook: 'string'
-                        }
-                    };
-                    await etcd.executions.running.set({ jobId, data });
-                    await etcd.executions.running.delete({ jobId });
-                    const result = await etcd.executions.running.get({ jobId });
-                    expect(result).to.be.null;
-                });
-            });
-            describe('watch', () => {
-                it('should watch execution', async () => {
-                    const jobId = `jobid-${uuidv4()}`;
-                    const data = { jobId, bla: 'bla' };
-                    await etcd.executions.running.watch({ jobId });
-                    etcd.executions.running.on('change', (res) => {
-                        expect(res.jobId).to.deep.equal(jobId);
-                        expect(res.data).to.deep.equal(data);
-                        _semaphore.callDone();
-                    });
-                    await etcd.executions.running.set({ data, jobId });
-                    await _semaphore.done();
-                });
-            });
-            describe('unwatch', () => {
-                it('should unwatch execution', async () => {
-                    let isCalled = false;
-                    const state = 'started';
-                    const jobId = `jobid-${uuidv4()}`;
-                    await etcd.executions.running.watch({ jobId });
-                    etcd.jobs.results.on('change', () => {
-                        isCalled = true;
-                    });
-                    await etcd.executions.running.unwatch({ jobId });
-                    await etcd.executions.running.set({ data: state, jobId });
-                    await delay(100);
-                    expect(isCalled).to.equal(false);
-                });
-            });
-        });
-    });
-    describe('Algorithms', () => {
-        describe('Store', () => {
-            describe('crud', () => {
-                it('should get/set specific store', async () => {
-                    const options = { name: 'green-alg', data: 'bla' };
-                    await etcd.algorithms.store.set(options);
-                    const etcdGet = await etcd.algorithms.store.get(options);
-                    expect(etcdGet).to.equal(options.data);
-                });
-                it('should delete specific store', async () => {
-                    const options = { name: 'delete-alg', data: 'bla' };
-                    await etcd.algorithms.store.set(options);
-                    const deleteRes = await etcd.algorithms.store.delete(options);
-                    const getRes = await etcd.algorithms.store.get(options);
-                    expect(getRes).to.be.null;
-                });
-                it('should get store list', async () => {
-                    const name = 'list';
-                    const data = { name, data: 'bla' }
-                    await etcd.algorithms.store.set({ name: `${name}-1-alg`, data });
-                    await etcd.algorithms.store.set({ name: `${name}-2-alg`, data });
-                    const list = await etcd.algorithms.store.list({ name });
-                    const every = list.every(l => l.name.startsWith(name));
-                    expect(every).to.equal(true);
-                    expect(list).to.have.lengthOf(2);
-                });
-            });
-            describe('watch', () => {
-                it('should watch change store', async () => {
-                    const options = { name: 'green-alg', data: 'bla' };
-                    await etcd.algorithms.store.watch(options);
-                    etcd.algorithms.store.on('change', (res) => {
-                        expect(res).to.deep.equal(options);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.store.set(options);
-                    await _semaphore.done();
-                });
-                it('should single watch store', async () => {
-                    const options = { name: 'single-watch-alg', data: 'bla' };
-                    const callback = sinon.spy();
-
-                    const etcd1 = new Etcd(config);
-                    const etcd2 = new Etcd(config);
-
-                    await etcd1.algorithms.store.singleWatch(options);
-                    etcd1.algorithms.store.on('change', callback);
-
-                    await etcd2.algorithms.store.singleWatch(options);
-                    etcd2.algorithms.store.on('change', callback);
-
-                    await etcd.algorithms.store.set(options);
-                    await delay(100);
-                    expect(callback.callCount).to.be.equal(1);
-                });
-                it('should watch delete store', async () => {
-                    const options = { name: 'delete-green-alg', data: 'bla' };
-                    await etcd.algorithms.store.watch(options);
-                    etcd.algorithms.store.on('delete', (res) => {
-                        expect(res.name).to.eql(options.name);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.store.set(options);
-                    await etcd.algorithms.store.delete(options);
-                    await _semaphore.done();
-                });
-                it('should get data when call to watch', async () => {
-                    const options = { name: 'blue-alg', data: 'bla' };
-                    await etcd.algorithms.store.set(options);
-                    const etcdGet = await etcd.algorithms.store.watch(options);
-                    expect(etcdGet).to.eql(options.data);
-                });
-                it('should watch all store', async () => {
-                    const options = { name: 'yellow-alg', data: 'bla' };
-                    await etcd.algorithms.store.watch();
-                    etcd.algorithms.store.on('change', (res) => {
-                        etcd.algorithms.store.unwatch();
-                        expect(res).to.deep.equal(options);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.store.set(options);
-                    await _semaphore.done();
-                });
-            });
-            describe('unwatch', () => {
-                it('should unwatch specific store', async () => {
-                    let isCalled = false;
-                    const options = { name: 'black-alg', data: 'bla' };
-                    await etcd.algorithms.store.watch(options);
-                    etcd.algorithms.store.on('change', (res) => {
-                        isCalled = true;
-                    });
-                    await etcd.algorithms.store.unwatch(options);
-                    await etcd.algorithms.store.set(options);
-                    await delay(100);
-                    expect(isCalled).to.equal(false);
-                });
-            });
-        });
-        describe('Requirements', () => {
-            describe('crud', () => {
-                it('should get/set specific resourceRequirement', async () => {
-                    const options = { name: 'green-alg', data: 'bla' };
-                    await etcd.algorithms.requirements.set(options);
-                    const etcdGet = await etcd.algorithms.requirements.get(options);
-                    expect(etcdGet).to.equal(options.data);
-                });
-                it('should delete specific resourceRequirement', async () => {
-                    const options = { name: 'delete-alg', data: 'bla' };
-                    await etcd.algorithms.requirements.set(options);
-                    await etcd.algorithms.requirements.delete(options);
-                    const etcdGet = await etcd.algorithms.requirements.get(options);
-                    expect(etcdGet).to.be.null;
-                });
-                it('should get all resourceRequirements', async () => {
-                    const name = 'list';
-                    await etcd.algorithms.requirements.set({ name: `${name}-1-alg`, data: 'bla' });
-                    await etcd.algorithms.requirements.set({ name: `${name}-2-alg`, data: 'bla' });
-                    const list = await etcd.algorithms.requirements.list({ name });
-                    const every = list.every(l => l.name.startsWith(name));
-                    expect(every).to.equal(true);
-                    expect(list).to.have.lengthOf(2);
-                });
-            });
-            describe('watch', () => {
-                it('should watch change resourceRequirements', async () => {
-                    const options = { name: 'green-alg', data: 'bla' };
-                    await etcd.algorithms.requirements.watch(options);
-                    etcd.algorithms.requirements.on('change', (res) => {
-                        expect(res).to.deep.equal(options);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.requirements.set(options);
-                    await _semaphore.done();
-                });
-                it('should single watch queue', async () => {
-                    const options = { name: 'single-watch-alg', data: 'bla' };
-                    const callback = sinon.spy();
-
-                    const etcd1 = new Etcd(config);
-                    const etcd2 = new Etcd(config);
-
-                    await etcd1.algorithms.requirements.singleWatch(options);
-                    etcd1.algorithms.requirements.on('change', callback);
-
-                    await etcd2.algorithms.requirements.singleWatch(options);
-                    etcd2.algorithms.requirements.on('change', callback);
-
-                    await etcd.algorithms.requirements.set(options);
-                    await delay(200);
-                    expect(callback.callCount).to.be.equal(1);
-                });
-                it('should watch delete resourceRequirements', async () => {
-                    const options = { name: 'delete-green-alg' };
-                    await etcd.algorithms.requirements.watch(options);
-                    etcd.algorithms.requirements.on('delete', (res) => {
-                        expect(res.name).to.eql(options.name);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.requirements.set(options);
-                    await etcd.algorithms.requirements.delete(options);
-                    await _semaphore.done();
-                });
-                it('should get data when call to watch', async () => {
-                    const options = { name: 'blue-alg', data: 'bla' };
-                    await etcd.algorithms.requirements.set(options);
-                    const etcdGet = await etcd.algorithms.requirements.watch(options);
-                    expect(etcdGet).to.eql(options.data);
-                });
-                it('should watch all resourceRequirements', async () => {
-                    const options2 = { name: 'yellow-alg', data: 'bla' };
-                    await etcd.algorithms.requirements.watch();
-                    etcd.algorithms.requirements.on('change', (res) => {
-                        etcd.algorithms.requirements.unwatch();
-                        expect(res).to.deep.equal(options2);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.requirements.set(options2);
-                    await _semaphore.done();
-                });
-            });
-            describe('unwatch', () => {
-                it('should unwatch specific resourceRequirements', async () => {
-                    let isCalled = false;
-                    const options = { name: 'black-alg', data: 'bla' };
-                    await etcd.algorithms.requirements.watch(options);
-                    etcd.algorithms.requirements.on('change', (res) => {
-                        isCalled = true;
-                    });
-                    await etcd.algorithms.requirements.unwatch(options);
-                    await etcd.algorithms.requirements.set(options);
-                    await delay(100);
-                    expect(isCalled).to.equal(false);
-                });
-            });
-        });
-        describe('Queue', () => {
-            describe('crud', () => {
-                it('should get and set specific algorithmQueue', async () => {
-                    const options = { name: 'get-alg', data: 'bla' };
-                    await etcd.algorithms.queue.set(options);
-                    const etcdGet = await etcd.algorithms.queue.get(options);
-                    expect(etcdGet).to.eql(options.data);
-                });
-                it('should delete specific algorithmQueue', async () => {
-                    const options = { name: 'delete-alg', data: 'bla' };
-                    await etcd.algorithms.queue.set(options);
-                    await etcd.algorithms.queue.delete(options);
-                    const etcdGet = await etcd.algorithms.queue.get(options);
-                    expect(etcdGet).to.be.null;
-                });
-                it('should get algorithmQueue list', async () => {
-                    const name = 'list';
-                    await etcd.algorithms.queue.set({ name: `${name}-1-alg`, data: 'bla' });
-                    await etcd.algorithms.queue.set({ name: `${name}-2-alg`, data: 'bla' });
-                    const list = await etcd.algorithms.queue.list({ name });
-                    expect(list).to.have.lengthOf(2);
-                });
-            });
-            describe('watch', () => {
-                it('should watch change algorithmQueue', async () => {
-                    const options = { name: 'green-alg', data: 'bla' };
-                    await etcd.algorithms.queue.watch(options);
-                    etcd.algorithms.queue.on('change', (res) => {
-                        expect(res).to.deep.equal(options);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.queue.set(options);
-                    await _semaphore.done();
-                });
-                it('should single watch queue', async () => {
-                    const options = { name: 'single-watch-alg', data: 'bla' };
-                    const callback = sinon.spy();
-
-                    const etcd1 = new Etcd(config);
-                    const etcd2 = new Etcd(config);
-
-                    await etcd1.algorithms.queue.singleWatch(options);
-                    etcd1.algorithms.queue.on('change', callback);
-
-                    await etcd2.algorithms.queue.singleWatch(options);
-                    etcd2.algorithms.queue.on('change', callback);
-
-                    await etcd.algorithms.queue.set(options);
-                    await delay(200);
-                    expect(callback.callCount).to.be.equal(1);
-                });
-                it('should watch delete algorithmQueue', async () => {
-                    const options = { name: 'delete-green-alg' };
-                    await etcd.algorithms.queue.watch(options);
-                    etcd.algorithms.queue.on('delete', (res) => {
-                        expect(res.name).to.eql(options.name);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.queue.set(options);
-                    await etcd.algorithms.queue.delete(options);
-                    await _semaphore.done();
-                });
-                it('should get data when call to watch', async () => {
-                    const options = { name: 'blue-alg', data: 'bla' };
-                    await etcd.algorithms.queue.set(options);
-                    const etcdGet = await etcd.algorithms.queue.watch(options);
-                    expect(etcdGet).to.eql(options.data);
-                });
-                it('should watch all algorithmQueue', async () => {
-                    const options = { name: 'yellow-alg', data: 'bla' };
-                    await etcd.algorithms.queue.watch();
-                    etcd.algorithms.queue.on('change', (res) => {
-                        etcd.algorithms.queue.unwatch();
-                        expect(res).to.deep.equal(options);
-                        _semaphore.callDone();
-                    });
-                    await etcd.algorithms.queue.set(options);
-                    await _semaphore.done();
-                });
-            });
-            describe('unwatch', () => {
-                it('should unwatch specific algorithmQueue', async () => {
-                    let isCalled = false;
-                    const options = { name: 'black-alg', data: 'bla' };
-                    await etcd.algorithms.queue.watch(options);
-                    etcd.algorithms.queue.on('change', (res) => {
-                        isCalled = true;
-                    });
-                    await etcd.algorithms.queue.unwatch(options);
-                    await etcd.algorithms.queue.set(options);
-                    await delay(100);
-                    expect(isCalled).to.equal(false);
-                });
-            });
-        });
-    });
     describe('PipelineDrives', () => {
         describe('TemplatesStore', () => {
             describe('crud', () => {
@@ -1771,6 +1538,239 @@ describe('Tests', () => {
                     await delay(100);
                     expect(isCalled).to.equal(false);
                 });
+            });
+        });
+    });
+    describe('Pipelines', () => {
+        describe('crud', () => {
+            it('should set results', async () => {
+                const name = 'pipeline-test';
+                const data = { bla: 'bla' };
+                await etcd.pipelines.set({ name, data });
+                const etcdGet = await etcd.pipelines.get({ name });
+                expect(etcdGet).to.have.deep.keys(data);
+            });
+            it('should delete pipeline', async () => {
+                const name = 'pipeline-delete';
+                const data = { bla: 'bla' };
+                await etcd.pipelines.set({ name, data });
+                await etcd.pipelines.delete({ name });
+                const etcdGet = await etcd.pipelines.get({ name });
+                expect(etcdGet).to.be.null;
+            });
+            it('should get pipeline list', async () => {
+                const name = 'pipeline-list';
+                const data = { bla: 'bla' };
+                await etcd.pipelines.set({ name: `${name}-1`, data });
+                await etcd.pipelines.set({ name: `${name}-2`, data });
+                const list = await etcd.pipelines.list({ name });
+                const every = list.every(l => l.name.startsWith(name));
+                expect(every).to.equal(true);
+                expect(list).to.have.lengthOf(2);
+            });
+        });
+        describe('watch', () => {
+            it('should watch set specific pipeline', async () => {
+                const name = 'pipeline-watch';
+                const data = { name, bla: 'bla' };
+                await etcd.pipelines.watch({ name });
+                etcd.pipelines.on('change', (res) => {
+                    expect(res.name).to.eql(name);
+                    expect(res.data).to.eql(data);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelines.set({ name, data });
+                await _semaphore.done();
+            });
+            it('should single watch queue', async () => {
+                const options = { name: 'single-watch-alg', data: 'bla' };
+                const callback = sinon.spy();
+
+                const etcd1 = new Etcd(config);
+                const etcd2 = new Etcd(config);
+
+                await etcd1.pipelines.singleWatch(options);
+                etcd1.pipelines.on('change', callback);
+
+                await etcd2.pipelines.singleWatch(options);
+                etcd2.pipelines.on('change', callback);
+
+                await etcd.pipelines.set(options);
+                await delay(200);
+                expect(callback.callCount).to.be.equal(1);
+            });
+            it('should watch delete specific pipeline', async () => {
+                const name = 'pipeline-2';
+                const data = { name, bla: 'bla' };
+                await etcd.pipelines.watch({ name });
+                etcd.pipelines.on('delete', (res) => {
+                    expect(res.name).to.eql(name);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelines.set({ name, data });
+                await etcd.pipelines.delete({ name });
+                await _semaphore.done();
+            });
+            it('should watch all pipelines', async () => {
+                const name = 'pipeline-3';
+                const data = { name, bla: 'bla' };
+                await etcd.pipelines.watch();
+                etcd.pipelines.on('change', (res) => {
+                    etcd.pipelines.unwatch();
+                    expect(res.name).to.eql(name);
+                    expect(res.data).to.eql(data);
+                    _semaphore.callDone();
+                });
+                await etcd.pipelines.set({ name, data });
+                await _semaphore.done();
+            });
+        });
+    });
+    describe('Webhooks', () => {
+        describe('crud', () => {
+            it('should set and get webhook', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const pipelineStatus = 'pending';
+                const type = 'results';
+                await etcd.webhooks.set({ jobId, type, data: new Webhook({ pipelineStatus }) });
+                const result = await etcd.webhooks.get({ jobId, type });
+                expect(result).to.have.property('timestamp');
+                expect(result).to.have.property('pipelineStatus');
+            });
+            it('should delete specific webhook', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const pipelineStatus = 'pending';
+                const type = 'results';
+                await etcd.webhooks.set({ jobId, type, data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.delete({ jobId, type });
+                const result = await etcd.webhooks.get({ jobId });
+                expect(result).to.be.null;
+            });
+            it('should set and get webhook list', async () => {
+                const jobId = 'jobs-list';
+                const pipelineStatus = 'pending';
+                const order = 'Mod';
+                const sort = 'asc';
+                const limit = 3;
+                await etcd.webhooks.set({ jobId: `${jobId}-1`, type: 'results', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: `${jobId}-2`, type: 'progress', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: `${jobId}-3`, type: 'error', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: `${jobId}-4`, type: 'step', data: new Webhook({ pipelineStatus }) });
+                await etcd.webhooks.set({ jobId: `${jobId}-5`, type: 'bla', data: new Webhook({ pipelineStatus }) });
+                const list = await etcd.webhooks.list({ jobId: 'jobs-list', order, sort, limit });
+                const every = list.every(l => l.jobId.startsWith(jobId));
+                expect(every).to.equal(true);
+                expect(list).to.have.lengthOf(limit);
+            });
+        });
+        describe('watch', () => {
+            it('should watch webhook results', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const pipelineStatus = 'pending';
+                const type = 'results';
+                const webhook = new Webhook({ pipelineStatus });
+                await etcd.webhooks.watch({ jobId });
+                etcd.webhooks.on('change', (result) => {
+                    expect(result).to.have.property('jobId');
+                    expect(result.data).to.have.property('timestamp');
+                    expect(result.data).to.have.property('pipelineStatus');
+                    _semaphore.callDone();
+                });
+                await etcd.webhooks.set({ jobId, type, data: webhook });
+                await _semaphore.done();
+            });
+            it('should watch webhook progress', async () => {
+                const jobId = `jobid-${uuidv4()}`;
+                const pipelineStatus = 'pending';
+                const type = 'progress';
+                const webhook = new Webhook({ pipelineStatus });
+                await etcd.webhooks.watch({ jobId });
+                etcd.webhooks.on('change', (result) => {
+                    expect(result).to.have.property('jobId');
+                    expect(result.data).to.have.property('timestamp');
+                    expect(result.data).to.have.property('pipelineStatus');
+                    _semaphore.callDone();
+                });
+                await etcd.webhooks.set({ jobId, type, data: webhook });
+                await _semaphore.done();
+            });
+        });
+        describe('unwatch', () => {
+            it('should unwatch webhook results', async () => {
+                let isCalled = false;
+                const jobId = `jobid-${uuidv4()}`;
+                const pipelineStatus = 'pending';
+                const type = 'results';
+                const webhook = new Webhook({ pipelineStatus });
+                await etcd.webhooks.watch({ jobId });
+                etcd.webhooks.on('change', () => {
+                    isCalled = true;
+                });
+                await etcd.webhooks.unwatch({ jobId });
+                await etcd.webhooks.set({ jobId, type, data: webhook });
+                await delay(100);
+                expect(isCalled).to.equal(false);
+            });
+        });
+    });
+    describe('Workers', () => {
+        describe('crud', () => {
+            it('should set status', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.set({ workerId, data: status });
+                const actual = await etcd.workers.get({ workerId });
+                expect(actual).to.eql(status);
+            });
+            it('should delete specific worker', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.set({ workerId, data: status });
+                await etcd.workers.delete({ workerId });
+                const result = await etcd.workers.get({ workerId });
+                expect(result).to.be.null;
+            });
+            it('should set error', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const error = { code: 'blah' };
+                await etcd.workers.set({ workerId, data: error });
+                const actual = await etcd.workers.get({ workerId });
+                expect(actual).to.eql(error);
+            });
+        });
+        describe('watch', () => {
+            it('should watch key', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.watch({ workerId });
+                etcd.workers.on('change', async (res) => {
+                    expect(res.workerId).to.eql(workerId);
+                    expect(res.data).to.eql(status);
+                    await etcd.workers.unwatch({ workerId });
+                    _semaphore.callDone();
+                });
+                await etcd.workers.set({ workerId, data: status });
+                await _semaphore.done();
+            });
+            it('should return the set obj on watch', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                const status = { state: 'ready' };
+                await etcd.workers.set({ workerId, data: status });
+                const actual = await etcd.workers.watch({ workerId });
+                expect(actual).to.eql(status);
+                await etcd.workers.unwatch({ workerId });
+            });
+            it('should throw error if watch on worker already exists', async () => {
+                const workerId = `workerid-${uuidv4()}`;
+                await etcd.workers.watch({ workerId });
+                try {
+                    await etcd.workers.watch({ workerId });
+                }
+                catch (error) {
+                    expect(error.message).to.equals(`already watching on /workers/${workerId}`);
+                    _semaphore.callDone();
+                }
+                await _semaphore.done();
             });
         });
     });
