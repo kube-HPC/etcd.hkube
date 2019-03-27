@@ -1,7 +1,7 @@
 sudo: required
 language: node_js
 node_js:
-- '8'
+- '10'
 services:
 - docker
 branches:
@@ -24,9 +24,9 @@ cache:
   directories:
   - node_modules
 script:
-- NODE_ENV=test npm run-script test-travis
+- npm run lint && npm run test:cov
 # Send coverage data to Coveralls
-after_script: "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+after_script: "npm run coverage"
 after_success:
 - |
   if ([ "$TRAVIS_BRANCH" == "master" ] || [ ! -z "$TRAVIS_TAG" ]) && [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
