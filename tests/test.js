@@ -1,15 +1,11 @@
-const { Etcd3 } = require('etcd3');
 const { expect } = require('chai');
 const sinon = require('sinon');
 const delay = require('await-delay');
 const uuidv4 = require('uuid/v4');
 const Etcd = require('../index');
-const { Watcher, Leaser } = require('../index');
-const Discovery = require('../lib/entities/discovery/discovery');
 const triggersTreeExpected = require('./mocks/triggers-tree.json');
 const Semaphore = require('await-done').semaphore;
 
-const client = new Etcd3({ hosts: 'http://localhost:4001' });
 let etcd;
 let _semaphore;
 const SERVICE_NAME = 'my-test-service';
@@ -27,10 +23,9 @@ describe('Tests', () => {
             for (let i = 0; i < size; i++) {
                 array.push({ score: 70 });
             }
-            await etcd._client.put('/test', array);
-            const json = await etcd._client.get('/test');
-            const result = JSON.parse(Object.values(json)[0]);
-            expect(result).to.deep.equal(array);
+            await etcd._client.put('/test/test', array);
+            const json = await etcd._client.get('/test/test', { isPrefix: false });
+            expect(json).to.deep.equal(array);
         });
     });
     describe('Locks', () => {
@@ -57,54 +52,48 @@ describe('Tests', () => {
         it('should create lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser({ client });
-            await leaser.create(10, key, value);
-            const lease = await leaser.get(key);
+            await etcd._client.leaser.create(10, key, value);
+            const lease = await etcd._client.leaser.get(key);
             expect(lease).to.deep.equal(value);
         });
         it('should create lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser({ client });
-            await leaser.create(10, key, value);
-            const lease = await leaser.get(key);
+            await etcd._client.leaser.create(10, key, value);
+            const lease = await etcd._client.leaser.get(key);
             expect(lease).to.deep.equal(value);
         });
         it('should update lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value1 = { bla: 'bla1' };
             const value2 = { bla: 'bla2' };
-            const leaser = new Leaser({ client });
-            await leaser.create(10, key, value1);
-            await leaser.update(value2);
-            const lease = await leaser.get(key);
+            await etcd._client.leaser.create(10, key, value1);
+            await etcd._client.leaser.update(value2);
+            const lease = await etcd._client.leaser.get(key);
             expect(lease).to.deep.equal(value2);
         });
         it('should get leases', async () => {
             const key = `/leases`;
-            const leaser = new Leaser({ client });
-            const leases = await leaser.list(key);
+            const leases = await etcd._client.leaser.list(key);
             expect(leases).to.be.an('array');
         });
         it('should release lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser({ client });
-            await leaser.create(10, key, value);
-            const leaseBefore = await leaser.get(key);
-            await leaser.release();
-            const leaseAfter = await leaser.get(key);
+            await etcd._client.leaser.create(10, key, value);
+            const leaseBefore = await etcd._client.leaser.get(key);
+            await etcd._client.leaser.release();
+            const leaseAfter = await etcd._client.leaser.get(key);
             expect(leaseBefore).to.deep.equal(value);
             expect(leaseAfter).to.deep.equal(value);
         });
         it('should revoke lease', async () => {
             const key = `/leases/lease-${uuidv4()}`;
             const value = { bla: 'bla' };
-            const leaser = new Leaser({ client });
-            await leaser.create(10, key, value);
-            const leaseBefore = await leaser.get(key);
-            await leaser.revoke();
-            const leaseAfter = await leaser.get(key);
+            await etcd._client.leaser.create(10, key, value);
+            const leaseBefore = await etcd._client.leaser.get(key);
+            await etcd._client.leaser.revoke();
+            const leaseAfter = await etcd._client.leaser.get(key);
             expect(leaseBefore).to.deep.equal(value);
             expect(leaseAfter).to.be.null;
         });
@@ -112,57 +101,24 @@ describe('Tests', () => {
             const key = `/leases/lost-${uuidv4()}`;
             const value1 = { bla: 'bla1' };
             const value2 = { bla: 'bla2' };
-            const leaser = new Leaser({ client });
-            await leaser.create(10, key, value1);
-            const lease1 = await leaser.get(key);
-            const spy = sinon.spy(leaser, 'create');
-            await leaser.revoke();
-            await leaser.update(value2);
+            await etcd._client.leaser.create(10, key, value1);
+            const lease1 = await etcd._client.leaser.get(key);
+            const spy = sinon.spy(etcd._client.leaser, 'create');
+            await etcd._client.leaser.revoke();
+            await etcd._client.leaser.update(value2);
             await delay(100);
-            const lease2 = await leaser.get(key);
+            const lease2 = await etcd._client.leaser.get(key);
             expect(spy.calledOnce).to.equal(true);
             expect(lease1).to.deep.equal(value1);
             expect(lease2).to.deep.equal(value2);
-        });
-    });
-    describe('Transaction', () => {
-        it('should do a transaction and swap keys', async () => {
-            const key1 = 'transaction/key1';
-            const key2 = 'transaction/key2';
-            const value1 = 'value1';
-            const value2 = 'value2';
-            await etcd._client.put(key1, value1);
-            await etcd._client.put(key2, value2);
-
-            try {
-                await client.stm({ retries: 0, isolation: 1 }).transact((tx) => {
-                    return Promise.all([
-                        tx.get(key1),
-                        tx.get(key2),
-                    ]).then(([val1, val2]) => {
-                        return Promise.all([
-                            tx.put(key1).value(value2),
-                            tx.put(key2).value(value1)
-                        ]);
-                    });
-                });
-            }
-            catch (e) {
-                console.error(e);
-            }
-            const result1 = await etcd._client.get(key1);
-            const result2 = await etcd._client.get(key2);
-            expect(Object.values(result1)[0]).to.equal(value2);
-            expect(Object.values(result2)[0]).to.equal(value1);
         });
     });
     describe('Watch', () => {
         it('should throw already watching on', () => {
             return new Promise(async (resolve) => {
                 const pathToWatch = 'path/not_exists';
-                const watcher = new Watcher(etcd._client);
-                await watcher.watch(pathToWatch);
-                watcher.watch(pathToWatch).catch((error) => {
+                await etcd._client.watcher.watch(pathToWatch);
+                etcd._client.watcher.watch(pathToWatch).catch((error) => {
                     expect(error.message).to.equal(`already watching on ${pathToWatch}`);
                     resolve();
                 });
@@ -170,19 +126,17 @@ describe('Tests', () => {
         });
         it('should throw unable to find watcher', (done) => {
             const pathToWatch = 'path/not_exists';
-            const watcher = new Watcher(etcd._client);
-            watcher.unwatch(pathToWatch).catch((error) => {
+            etcd._client.watcher.unwatch(pathToWatch).catch((error) => {
                 expect(error.message).to.equal(`unable to find watcher for ${pathToWatch}`);
                 done();
             });
         });
         it('should register key and update ttl according to interval', async () => {
             const pathToWatch = 'path/to/watch';
-            const watcher = new Watcher(etcd._client);
             const putEvent = sinon.spy();
             const changeEvent = sinon.spy();
             const deleteEvent = sinon.spy();
-            const watch = await watcher.watch(pathToWatch);
+            const watch = await etcd._client.watcher.watch(pathToWatch);
             expect(watch).to.have.property('watcher');
             expect(watch).to.have.property('data');
             watch.watcher.on('disconnected', () => console.log('disconnected...'));
@@ -808,7 +762,7 @@ describe('Tests', () => {
                 expect(result2).to.be.null;
                 expect(result3).to.be.null;
             });
-            xit('should get prefix data from discovery with serviceName - multiple results', async () => {
+            it('should get prefix data from discovery with serviceName - multiple results', async () => {
                 const serviceName = `test-service-${uuidv4()}`;
                 const instanceId1 = `register-test-${uuidv4()}`;
                 const instanceId2 = `register-test-${uuidv4()}`;
@@ -818,44 +772,25 @@ describe('Tests', () => {
                 const expected2 = { foo: 'baz' };
                 await etcd1.discovery.register({ instanceId: instanceId1, data: expected1 });
                 await etcd2.discovery.register({ instanceId: instanceId2, data: expected2 });
-
-                const path = `/discovery/${serviceName}`;
-                const actual = await etcd1._client.getByQuery(path);
-
-                expect(actual).deep.include({ [`/discovery/test-service-4/${instanceId}`]: expected1 });
-                expect(actual).deep.include({ [`/discovery/test-service-4/${instanceId2}`]: expected2 });
+                const actual = await etcd1.discovery.list({ serviceName });
+                expect(actual[0].data).to.deep.equal(expected1);
+                expect(actual[1].data).to.deep.equal(expected2);
             });
             it('should get data from discovery without serviceName', async () => {
+                const serviceName = 'test-service';
                 const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery({
-                    serviceName: 'test-service',
-                    instanceId,
-                    client: etcd._client
-                });
-                await discovery.register({});
+                await etcd.discovery.register({ serviceName, instanceId });
                 const expected = { foo: 'bar' };
-                await discovery.updateRegisteredData(expected);
-                const actual = await discovery.get({
-                    prefix: 'test-service',
-                    instanceId
-                });
+                await etcd.discovery.updateRegisteredData(expected);
+                const actual = await etcd.discovery.get({ serviceName, instanceId });
                 expect(actual).to.eql(expected);
             });
             it('should get data from discovery with wrong serviceName', async () => {
                 const instanceId = `register-test-${uuidv4()}`;
-                const discovery = new Discovery({
-                    serviceName: 'test-service-5',
-                    instanceId,
-                    client: etcd._client
-                });
-                await discovery.register({});
+                await etcd.discovery.register({ serviceName: 'test-service-5', instanceId, });
                 const expected = { foo: 'bar' };
-                await discovery.updateRegisteredData(expected);
-                const actual = await discovery.get({
-                    serviceName: 'test-service-wrong',
-                    prefix: 'test-service',
-                    instanceId
-                });
+                await etcd.discovery.updateRegisteredData(expected);
+                const actual = await etcd.discovery.get({ serviceName: 'test-service-wrong', instanceId });
                 expect(actual).to.be.null;
             });
         });
@@ -1391,7 +1326,7 @@ describe('Tests', () => {
                     await etcd.jobs.status.set({ data: data1, jobId: jobId1 });
                     await etcd.jobs.status.set({ data: data2, jobId: jobId2 });
 
-                    await delay(100);
+                    await delay(200);
 
                     expect(callback.callCount).to.be.equal(4);
                 });
