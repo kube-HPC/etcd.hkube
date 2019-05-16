@@ -16,7 +16,7 @@
       "test"
     ]
   },
-  "author": "maty zisserman",
+  "author": "Hkube",
   "license": "ISC",
   "dependencies": {
     "ajv": "^6.10.0",
