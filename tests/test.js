@@ -190,13 +190,22 @@ describe('Tests', () => {
                     const etcdGet = await etcd.algorithms.builds.get(options);
                     expect(etcdGet).to.equal(options.data);
                 });
-                it('should update specific build', async () => {
+                it('should failed to update specific build', async () => {
+                    const buildId = `build-${uuidv4()}`;
+                    const options = { buildId, data: { newProp: 'bla' } };
+                    const res = await etcd.algorithms.builds.update(options);
+                    const etcdGet = await etcd.algorithms.builds.get(options);
+                    expect(etcdGet).to.be.null;
+                    expect(res).to.be.false;
+                });
+                it('should success to update specific build', async () => {
                     const buildId = `build-${uuidv4()}`;
                     const prop = 'bla';
                     const options = { buildId, data: { prop } };
                     await etcd.algorithms.builds.set(options);
-                    await etcd.algorithms.builds.update({ buildId, data: { newProp: prop } });
+                    const res = await etcd.algorithms.builds.update({ buildId, data: { newProp: prop } });
                     const etcdGet = await etcd.algorithms.builds.get(options);
+                    expect(res).to.be.true;
                     expect(etcdGet).to.deep.equal({ prop, newProp: prop });
                 });
                 it('should delete specific build', async () => {
@@ -985,7 +994,7 @@ describe('Tests', () => {
                     const state = 'started';
                     await etcd.jobs.state.watch({ jobId });
                     etcd.jobs.state.on('change', (res) => {
-                        expect(res.state).to.equal(state);
+                        expect(res.data).to.equal(state);
                     });
                     etcd.jobs.state.set({ data: state, jobId });
                 });
