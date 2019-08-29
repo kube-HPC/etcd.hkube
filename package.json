@@ -19,25 +19,25 @@
   "author": "Hkube",
   "license": "ISC",
   "dependencies": {
-    "ajv": "^6.10.0",
-    "etcd3": "^0.2.11",
-    "lodash.merge": "^4.6.1",
+    "ajv": "^6.10.2",
+    "etcd3": "^0.2.13",
+    "lodash.merge": "^4.6.2",
     "moment": "^2.24.0",
     "string-template": "^1.0.0",
-    "uuid": "^3.1.0"
+    "uuid": "^3.3.3"
   },
   "devDependencies": {
     "await-delay": "^1.0.0",
     "await-done": "^1.0.10",
     "chai": "^4.2.0",
-    "coveralls": "^3.0.3",
-    "eslint": "^5.15.3",
-    "eslint-config-airbnb-base": "^13.1.0",
+    "coveralls": "^3.0.6",
+    "eslint": "^6.2.2",
+    "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-chai-friendly": "^0.4.1",
-    "eslint-plugin-import": "^2.16.0",
-    "mocha": "^6.0.2",
-    "nyc": "^13.3.0",
+    "eslint-plugin-import": "^2.18.2",
+    "mocha": "^6.2.0",
+    "nyc": "^14.1.1",
     "pre-commit": "^1.2.2",
-    "sinon": "^7.3.1"
+    "sinon": "^7.4.1"
   }
 }
