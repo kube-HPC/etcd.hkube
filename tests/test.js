@@ -36,6 +36,19 @@ describe('Tests', () => {
             const response = await etcd._client.getByQuery(`${prefix}`, { limit });
             expect(Object.keys(response)).to.have.lengthOf(limit);
         });
+        it('should put and delete large number of keys', async function () {
+            this.timeout(10000);
+            const prefix = '/bigsizeDeletePrefix';
+            const limit = 1000;
+            const array = Array.from(Array(limit).keys());
+            await Promise.all(array.map(a => etcd._client.put(`${prefix}/${a}`, { data: `value-${a}` })));
+            const before = await etcd._client.getByQuery(`${prefix}`, { limit });
+            expect(Object.keys(before)).to.have.lengthOf(limit);
+
+            await etcd._client.delete(`${prefix}`, { isPrefix: true });
+            const after = await etcd._client.getByQuery(`${prefix}`, { limit });
+            expect(Object.keys(after)).to.have.lengthOf(0);
+        });
     });
     describe('Locks', () => {
         it('should acquire and release locks', async () => {
@@ -189,10 +202,28 @@ describe('Tests', () => {
             expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val-1');
             expect(Object.keys(data).length).to.equal(3);
         });
+        it('etcd list with invalid order', async () => {
+            const instanceId = `etcd-list-${uuidv4()}`;
+            await etcd._client.put(`${instanceId}/1`, { val: 'val-1' });
+            await etcd._client.put(`${instanceId}/2`, { val: 'val-2' });
+            await etcd._client.put(`${instanceId}/3`, { val: 'val-3' });
+            const data = await etcd._client.getByQuery(`${instanceId}`, { order: 'No_Such', sort: 'asc' });
+            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val-1');
+            expect(Object.keys(data).length).to.equal(3);
+        });
     });
     describe('Algorithms', () => {
         describe('Builds', () => {
             describe('crud', () => {
+                it('should throw validation error', () => {
+                    return new Promise((resolve, reject) => {
+                        const options = { nonProperty: 'green-alg' };
+                        etcd.algorithms.builds.set(options).catch(e => {
+                            expect(e.message).to.equal(`data should have required property 'buildId'`);
+                            resolve();
+                        });
+                    });
+                });
                 it('should get/set specific build', async () => {
                     const options = { buildId: 'green-alg', data: 'bla' };
                     await etcd.algorithms.builds.set(options);
@@ -328,6 +359,15 @@ describe('Tests', () => {
         });
         describe('Debug', () => {
             describe('crud', () => {
+                it('should throw validation error', () => {
+                    return new Promise((resolve, reject) => {
+                        const options = { nonProperty: 'green-alg' };
+                        etcd.algorithms.debug.set(options).catch(e => {
+                            expect(e.message).to.equal(`data should have required property 'name'`);
+                            resolve();
+                        });
+                    });
+                });
                 it('should get/set specific debug', async () => {
                     const options = { name: 'green-alg', data: 'bla' };
                     await etcd.algorithms.debug.set(options);
@@ -435,6 +475,15 @@ describe('Tests', () => {
         });
         describe('Executions', () => {
             describe('crud', () => {
+                it('should throw validation error', () => {
+                    return new Promise((resolve, reject) => {
+                        const options = { nonProperty: 'green-alg' };
+                        etcd.algorithms.executions.set(options).catch(e => {
+                            expect(e.message).to.equal(`data should have required property 'jobId'`);
+                            resolve();
+                        });
+                    });
+                });
                 it('should get/set specific execution', async () => {
                     const jobId = `jobid-${uuidv4()}`;
                     const taskId = `taskId-${uuidv4()}`;
@@ -933,6 +982,18 @@ describe('Tests', () => {
                 await etcd.discovery.updateRegisteredData(expected);
                 const actual = await etcd.discovery.get({ serviceName: 'test-service-wrong', instanceId });
                 expect(actual).to.be.null;
+            });
+            it('should delete specific discovery', async () => {
+                const serviceName = `test-service-${uuidv4()}`;
+                const instanceId = `register-test-${uuidv4()}`;
+                const data = { prop: 'bla' };
+                const etcd = new Etcd({ ...config, serviceName });
+                await etcd.discovery.register({ instanceId, data });
+                const before = await etcd.discovery.get({ instanceId });
+                expect(before).to.eql(data);
+                await etcd.discovery.delete({ instanceId, serviceName });
+                const after = await etcd.discovery.get({ instanceId });
+                expect(after).to.be.null;
             });
         });
         describe('watch', () => {
