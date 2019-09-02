@@ -27,6 +27,15 @@ describe('Tests', () => {
             const json = await etcd._client.get('/test/test', { isPrefix: false });
             expect(json).to.deep.equal(array);
         });
+        it('should put and get large number of keys', async function () {
+            this.timeout(10000);
+            const prefix = '/bigsizePrefix';
+            const limit = 3000;
+            const array = Array.from(Array(limit).keys());
+            await Promise.all(array.map(a => etcd._client.put(`${prefix}/${a}`, { data: `value-${a}` })));
+            const response = await etcd._client.getByQuery(`${prefix}`, { limit });
+            expect(Object.keys(response)).to.have.lengthOf(limit);
+        });
     });
     describe('Locks', () => {
         it('should acquire and release locks', async () => {
