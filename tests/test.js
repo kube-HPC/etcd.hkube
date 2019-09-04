@@ -36,6 +36,19 @@ describe('Tests', () => {
             const response = await etcd._client.getByQuery(`${prefix}`, { limit });
             expect(Object.keys(response)).to.have.lengthOf(limit);
         });
+        it('should put and delete large number of keys', async function () {
+            this.timeout(10000);
+            const prefix = '/bigsizeDeletePrefix';
+            const limit = 1000;
+            const array = Array.from(Array(limit).keys());
+            await Promise.all(array.map(a => etcd._client.put(`${prefix}/${a}`, { data: `value-${a}` })));
+            const before = await etcd._client.getByQuery(`${prefix}`, { limit });
+            expect(Object.keys(before)).to.have.lengthOf(limit);
+
+            await etcd._client.delete(`${prefix}`, { isPrefix: true });
+            const after = await etcd._client.getByQuery(`${prefix}`, { limit });
+            expect(Object.keys(after)).to.have.lengthOf(0);
+        });
     });
     describe('Locks', () => {
         it('should acquire and release locks', async () => {
@@ -189,10 +202,28 @@ describe('Tests', () => {
             expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val-1');
             expect(Object.keys(data).length).to.equal(3);
         });
+        it('etcd list with invalid order', async () => {
+            const instanceId = `etcd-list-${uuidv4()}`;
+            await etcd._client.put(`${instanceId}/1`, { val: 'val-1' });
+            await etcd._client.put(`${instanceId}/2`, { val: 'val-2' });
+            await etcd._client.put(`${instanceId}/3`, { val: 'val-3' });
+            const data = await etcd._client.getByQuery(`${instanceId}`, { order: 'No_Such', sort: 'asc' });
+            expect(JSON.parse(data[Object.keys(data)[0]]).val).to.equal('val-1');
+            expect(Object.keys(data).length).to.equal(3);
+        });
     });
     describe('Algorithms', () => {
         describe('Builds', () => {
             describe('crud', () => {
+                it('should throw validation error', () => {
+                    return new Promise((resolve, reject) => {
+                        const options = { nonProperty: 'green-alg' };
+                        etcd.algorithms.builds.set(options).catch(e => {
+                            expect(e.message).to.equal(`data should have required property 'buildId'`);
+                            resolve();
+                        });
+                    });
+                });
                 it('should get/set specific build', async () => {
                     const options = { buildId: 'green-alg', data: 'bla' };
                     await etcd.algorithms.builds.set(options);
@@ -260,7 +291,7 @@ describe('Tests', () => {
                     etcd2.algorithms.builds.on('change', callback);
 
                     await etcd.algorithms.builds.set(options);
-                    await delay(100);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should release change lock watch builds', async () => {
@@ -328,6 +359,15 @@ describe('Tests', () => {
         });
         describe('Debug', () => {
             describe('crud', () => {
+                it('should throw validation error', () => {
+                    return new Promise((resolve, reject) => {
+                        const options = { nonProperty: 'green-alg' };
+                        etcd.algorithms.debug.set(options).catch(e => {
+                            expect(e.message).to.equal(`data should have required property 'name'`);
+                            resolve();
+                        });
+                    });
+                });
                 it('should get/set specific debug', async () => {
                     const options = { name: 'green-alg', data: 'bla' };
                     await etcd.algorithms.debug.set(options);
@@ -386,7 +426,7 @@ describe('Tests', () => {
                     etcd2.algorithms.debug.on('change', callback);
 
                     await etcd.algorithms.debug.set(options);
-                    await delay(100);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete debug', async () => {
@@ -428,6 +468,138 @@ describe('Tests', () => {
                     });
                     await etcd.algorithms.debug.unwatch(options);
                     await etcd.algorithms.debug.set(options);
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
+            });
+        });
+        describe('Executions', () => {
+            describe('crud', () => {
+                it('should throw validation error', () => {
+                    return new Promise((resolve, reject) => {
+                        const options = { nonProperty: 'green-alg' };
+                        etcd.algorithms.executions.set(options).catch(e => {
+                            expect(e.message).to.equal(`data should have required property 'jobId'`);
+                            resolve();
+                        });
+                    });
+                });
+                it('should get/set specific execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.set(options);
+                    const etcdGet = await etcd.algorithms.executions.get(options);
+                    expect(etcdGet).to.deep.equal(options);
+                });
+                it('should update specific execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const prop = 'bla';
+                    const options = { jobId, taskId, data: { prop } };
+                    await etcd.algorithms.executions.set(options);
+                    await etcd.algorithms.executions.update({ jobId, taskId, data: { newProp: prop } });
+                    const etcdGet = await etcd.algorithms.executions.get(options);
+                    expect(etcdGet.data).to.deep.equal({ prop, newProp: prop });
+                });
+                it('should delete specific execution', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.set(options);
+                    await etcd.algorithms.executions.delete(options);
+                    const getRes = await etcd.algorithms.executions.get(options);
+                    expect(getRes).to.be.null;
+                });
+                it('should get execution list', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    await etcd.algorithms.executions.set({ jobId, taskId: `taskId-${uuidv4()}`, data: `bla-${uuidv4()}` });
+                    await etcd.algorithms.executions.set({ jobId, taskId: `taskId-${uuidv4()}`, data: `bla-${uuidv4()}` });
+                    const list = await etcd.algorithms.executions.list({ jobId });
+                    const every = list.every(l => l.jobId === jobId);
+                    expect(every).to.equal(true);
+                    expect(list).to.have.lengthOf(2);
+                });
+            });
+            describe('watch', () => {
+                it('should watch change executions', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.watch(options);
+                    etcd.algorithms.executions.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.executions.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch executions', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
+
+                    await etcd1.algorithms.executions.singleWatch(options);
+                    etcd1.algorithms.executions.on('change', callback);
+
+                    await etcd2.algorithms.executions.singleWatch(options);
+                    etcd2.algorithms.executions.on('change', callback);
+
+                    await etcd.algorithms.executions.set(options);
+                    await delay(200);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete executions', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.watch(options);
+                    etcd.algorithms.executions.on('delete', (res) => {
+                        expect(res.name).to.eql(options.name);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.executions.set(options);
+                    await etcd.algorithms.executions.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.set(options);
+                    const etcdGet = await etcd.algorithms.executions.watch(options);
+                    expect(etcdGet).to.eql(options);
+                });
+                it('should watch all executions', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.watch();
+                    etcd.algorithms.executions.on('change', (res) => {
+                        etcd.algorithms.executions.unwatch();
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.executions.set(options);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific executions', async () => {
+                    let isCalled = false;
+                    const jobId = `jobid-${uuidv4()}`;
+                    const taskId = `taskId-${uuidv4()}`;
+                    const options = { jobId, taskId, data: 'bla' };
+                    await etcd.algorithms.executions.watch(options);
+                    etcd.algorithms.executions.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.executions.unwatch(options);
+                    await etcd.algorithms.executions.set(options);
                     await delay(100);
                     expect(isCalled).to.equal(false);
                 });
@@ -493,7 +665,7 @@ describe('Tests', () => {
                     etcd2.algorithms.store.on('change', callback);
 
                     await etcd.algorithms.store.set(options);
-                    await delay(100);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete store', async () => {
@@ -811,6 +983,18 @@ describe('Tests', () => {
                 const actual = await etcd.discovery.get({ serviceName: 'test-service-wrong', instanceId });
                 expect(actual).to.be.null;
             });
+            it('should delete specific discovery', async () => {
+                const serviceName = `test-service-${uuidv4()}`;
+                const instanceId = `register-test-${uuidv4()}`;
+                const data = { prop: 'bla' };
+                const etcd = new Etcd({ ...config, serviceName });
+                await etcd.discovery.register({ instanceId, data });
+                const before = await etcd.discovery.get({ instanceId });
+                expect(before).to.eql(data);
+                await etcd.discovery.delete({ instanceId, serviceName });
+                const after = await etcd.discovery.get({ instanceId });
+                expect(after).to.be.null;
+            });
         });
         describe('watch', () => {
             it('should watch for after register', async () => {
@@ -1022,7 +1206,7 @@ describe('Tests', () => {
                     etcd2.jobs.state.on('change', callback);
 
                     await etcd.jobs.state.set({ data: state, jobId });
-                    await delay(100);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch stop state', async () => {
@@ -1192,7 +1376,7 @@ describe('Tests', () => {
                     etcd2.jobs.results.on('change', callback);
 
                     await etcd.jobs.results.set({ data, jobId });
-                    await delay(100);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch for delete job results', async () => {
@@ -1534,7 +1718,7 @@ describe('Tests', () => {
                     etcd2.pipelineDrivers.store.on('change', callback);
 
                     await etcd.pipelineDrivers.store.set(options);
-                    await delay(100);
+                    await delay(200);
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete store', async () => {
