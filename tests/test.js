@@ -248,6 +248,26 @@ describe('Tests', () => {
                     expect(res).to.be.true;
                     expect(etcdGet.data).to.deep.equal({ prop, newProp: prop });
                 });
+                it('should success to update specific build with predicate', async () => {
+                    const buildId = `build-${uuidv4()}`;
+                    const prop = 'bla';
+                    const options = { buildId, data: { prop } };
+                    await etcd.algorithms.builds.set(options);
+                    const res = await etcd.algorithms.builds.update({ buildId, data: { newProp: prop } }, (b) => b.data.prop === prop);
+                    const etcdGet = await etcd.algorithms.builds.get(options);
+                    expect(res).to.be.true;
+                    expect(etcdGet.data).to.deep.equal({ prop, newProp: prop });
+                });
+                it('should failed to update specific build with predicate', async () => {
+                    const buildId = `build-${uuidv4()}`;
+                    const prop = 'bla';
+                    const options = { buildId, data: { prop } };
+                    await etcd.algorithms.builds.set(options);
+                    const res = await etcd.algorithms.builds.update({ buildId, data: { newProp: prop } }, (b) => b.data.prop === 'no_such');
+                    const etcdGet = await etcd.algorithms.builds.get(options);
+                    expect(res).to.be.false;
+                    expect(etcdGet.data).to.deep.equal({ prop });
+                });
                 it('should delete specific build', async () => {
                     const options = { buildId: 'delete-alg', data: 'bla' };
                     await etcd.algorithms.builds.set(options);
