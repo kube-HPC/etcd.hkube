@@ -252,11 +252,17 @@ describe('Tests', () => {
                     const buildId = `build-${uuidv4()}`;
                     const prop = 'bla';
                     const options = { buildId, data: { prop } };
+                    const newOptions = { buildId, data: { newProp: prop } };
                     await etcd.algorithms.builds.set(options);
-                    const res = await etcd.algorithms.builds.update({ buildId, data: { newProp: prop } }, (b) => b.data.prop === prop);
+                    const res = await etcd.algorithms.builds.update(newOptions, (b) => {
+                        if (b.data.prop === prop) {
+                            return { ...b, ...newOptions };
+                        }
+                        return null
+                    });
                     const etcdGet = await etcd.algorithms.builds.get(options);
                     expect(res).to.be.true;
-                    expect(etcdGet.data).to.deep.equal({ prop, newProp: prop });
+                    expect(etcdGet.data).to.deep.equal({ newProp: prop });
                 });
                 it('should failed to update specific build with predicate', async () => {
                     const buildId = `build-${uuidv4()}`;
