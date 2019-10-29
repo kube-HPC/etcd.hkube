@@ -930,6 +930,110 @@ describe('Tests', () => {
                 });
             });
         });
+        describe('Versions', () => {
+            describe('crud', () => {
+                it('should get and set specific version', async () => {
+                    const options = { name: 'get-alg', image: 'my-image', data: 'bla' };
+                    await etcd.algorithms.versions.set(options);
+                    const etcdGet = await etcd.algorithms.versions.get(options);
+                    expect(etcdGet).to.eql(options);
+                });
+                it('should delete specific version', async () => {
+                    const options = { name: 'delete-alg', image: 'my-image', data: 'bla' };
+                    await etcd.algorithms.versions.set(options);
+                    await etcd.algorithms.versions.delete(options);
+                    const etcdGet = await etcd.algorithms.versions.get(options);
+                    expect(etcdGet).to.be.null;
+                });
+                it('should get version list', async () => {
+                    const name = 'list';
+                    await etcd.algorithms.versions.set({ name: `${name}-1-alg`, image: 'my-image', data: 'bla1' });
+                    await etcd.algorithms.versions.set({ name: `${name}-2-alg`, image: 'my-image', data: 'bla2' });
+                    const list = await etcd.algorithms.versions.list({ name });
+                    expect(list).to.have.lengthOf(2);
+                });
+                xit('should get version list', async () => {
+                    const name = 'list';
+                    const uid = uuidv4();
+                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, image: 'my-image-1', data: 'bla1' });
+                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, image: 'my-image-2', data: 'bla2' });
+                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, image: 'my-image-3', data: 'bla3' });
+                    const list = await etcd.algorithms.versions.list({ name });
+                    expect(list).to.have.lengthOf(2);
+                });
+            });
+            describe('watch', () => {
+                it('should watch change version', async () => {
+                    const options = { name: 'green-alg', image: 'my-image', data: 'bla' };
+                    await etcd.algorithms.versions.watch(options);
+                    etcd.algorithms.versions.on('change', (res) => {
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.versions.set(options);
+                    await _semaphore.done();
+                });
+                it('should single watch version', async () => {
+                    const options = { name: 'single-watch-alg', image: 'my-image', data: 'bla' };
+                    const callback = sinon.spy();
+
+                    const etcd1 = new Etcd(config);
+                    const etcd2 = new Etcd(config);
+
+                    await etcd1.algorithms.versions.singleWatch(options);
+                    etcd1.algorithms.versions.on('change', callback);
+
+                    await etcd2.algorithms.versions.singleWatch(options);
+                    etcd2.algorithms.versions.on('change', callback);
+
+                    await etcd.algorithms.versions.set(options);
+                    await delay(200);
+                    expect(callback.callCount).to.be.equal(1);
+                });
+                it('should watch delete version', async () => {
+                    const options = { name: 'delete-green-alg', image: 'my-image', };
+                    await etcd.algorithms.versions.watch(options);
+                    etcd.algorithms.versions.on('delete', (res) => {
+                        expect(res.name).to.eql(options.name);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.versions.set(options);
+                    await etcd.algorithms.versions.delete(options);
+                    await _semaphore.done();
+                });
+                it('should get data when call to watch', async () => {
+                    const options = { name: 'blue-alg', image: 'my-image', data: 'bla' };
+                    await etcd.algorithms.versions.set(options);
+                    const etcdGet = await etcd.algorithms.versions.watch(options);
+                    expect(etcdGet).to.eql(options);
+                });
+                it('should watch all version', async () => {
+                    const options = { name: 'yellow-alg', image: 'my-image', data: 'bla' };
+                    await etcd.algorithms.versions.watch();
+                    etcd.algorithms.versions.on('change', (res) => {
+                        etcd.algorithms.versions.unwatch();
+                        expect(res).to.deep.equal(options);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.versions.set(options);
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch specific version', async () => {
+                    let isCalled = false;
+                    const options = { name: 'black-alg', image: 'my-image', data: 'bla' };
+                    await etcd.algorithms.versions.watch(options);
+                    etcd.algorithms.versions.on('change', (res) => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.versions.unwatch(options);
+                    await etcd.algorithms.versions.set(options);
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
+            });
+        });
     });
     describe('Discovery', () => {
         describe('crud', () => {
