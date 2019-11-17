@@ -933,13 +933,13 @@ describe('Tests', () => {
         describe('Versions', () => {
             describe('crud', () => {
                 it('should get and set specific version', async () => {
-                    const options = { name: 'get-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'get-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.set(options);
                     const etcdGet = await etcd.algorithms.versions.get(options);
                     expect(etcdGet).to.eql(options);
                 });
                 it('should delete specific version', async () => {
-                    const options = { name: 'delete-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'delete-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.set(options);
                     await etcd.algorithms.versions.delete(options);
                     const etcdGet = await etcd.algorithms.versions.get(options);
@@ -948,16 +948,16 @@ describe('Tests', () => {
                 it('should get version list', async () => {
                     const name = 'list';
                     const uid = uuidv4();
-                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, image: 'my-image-1', data: { name: 'bla' } });
-                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, image: 'my-image-2', data: { name: 'bla' } });
-                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, image: 'my-image-3', data: { name: 'bla' } });
+                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, algorithmImage: 'my-image-1', data: { name: 'bla' } });
+                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, algorithmImage: 'my-image-2', data: { name: 'bla' } });
+                    await etcd.algorithms.versions.set({ name: `${name}-${uid}`, algorithmImage: 'my-image-3', data: { name: 'bla' } });
                     const list = await etcd.algorithms.versions.list({ name: `${name}-${uid}` });
                     expect(list).to.have.lengthOf(3);
                 });
             });
             describe('watch', () => {
                 it('should watch change version', async () => {
-                    const options = { name: 'green-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'green-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.watch(options);
                     etcd.algorithms.versions.on('change', (res) => {
                         expect(res).to.deep.equal(options);
@@ -967,7 +967,7 @@ describe('Tests', () => {
                     await _semaphore.done();
                 });
                 it('should single watch version', async () => {
-                    const options = { name: 'single-watch-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'single-watch-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     const callback = sinon.spy();
 
                     const etcd1 = new Etcd(config);
@@ -984,7 +984,7 @@ describe('Tests', () => {
                     expect(callback.callCount).to.be.equal(1);
                 });
                 it('should watch delete version', async () => {
-                    const options = { name: 'delete-green-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'delete-green-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.watch(options);
                     etcd.algorithms.versions.on('delete', (res) => {
                         expect(res.name).to.eql(options.name);
@@ -995,13 +995,13 @@ describe('Tests', () => {
                     await _semaphore.done();
                 });
                 it('should get data when call to watch', async () => {
-                    const options = { name: 'blue-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'blue-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.set(options);
                     const etcdGet = await etcd.algorithms.versions.watch(options);
                     expect(etcdGet).to.eql(options);
                 });
                 it('should watch all version', async () => {
-                    const options = { name: 'yellow-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'yellow-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.watch();
                     etcd.algorithms.versions.on('change', (res) => {
                         etcd.algorithms.versions.unwatch();
@@ -1015,7 +1015,7 @@ describe('Tests', () => {
             describe('unwatch', () => {
                 it('should unwatch specific version', async () => {
                     let isCalled = false;
-                    const options = { name: 'black-alg', image: 'my-image', data: { name: 'bla' } };
+                    const options = { name: 'black-alg', algorithmImage: 'my-image', data: { name: 'bla' } };
                     await etcd.algorithms.versions.watch(options);
                     etcd.algorithms.versions.on('change', (res) => {
                         isCalled = true;
