@@ -2100,7 +2100,7 @@ describe('Tests', () => {
                 await etcd.webhooks.set({ jobId: `${jobId}-3`, type: 'error', data });
                 await etcd.webhooks.set({ jobId: `${jobId}-4`, type: 'step', data });
                 await etcd.webhooks.set({ jobId: `${jobId}-5`, type: 'bla', data });
-                const list = await etcd.webhooks.list({ jobId: 'jobs-list', order, sort, limit });
+                const list = await etcd.webhooks.listPrefix({ jobId: 'jobs-list', order, sort, limit });
                 const every = list.every(l => l.jobId.startsWith(jobId));
                 expect(every).to.equal(true);
                 expect(list).to.have.lengthOf(limit);
