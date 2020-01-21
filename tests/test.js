@@ -1284,6 +1284,60 @@ describe('Tests', () => {
             });
         });
     });
+    describe('Boards', () => {
+        describe('crud', () => {
+            it('should throw validation error', () => {
+                return new Promise((resolve, reject) => {
+                    const options = {};
+                    etcd.tensorboard.set(options).catch(e => {
+                        expect(e.message).to.equal(`data should have required property 'logDir'`);
+                        resolve();
+                    });
+                });
+            });
+            it('should get/set specific board', async () => {
+                const options = { id: 'bsdr', pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' };
+                await etcd.tensorboard.set(options);
+                const etcdGet = await etcd.tensorboard.get(options);
+                expect(etcdGet).to.deep.equal(options);
+            });
+            it('should failed to update specific board', async () => {
+                const id = `board-${uuidv4()}`;
+                const options = { id, pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' };
+                const res = await etcd.tensorboard.update(options);
+                const etcdGet = await etcd.tensorboard.get(options);
+                expect(etcdGet).to.be.null;
+                expect(res).to.be.false;
+            });
+            it('should success to update specific board', async () => {
+                const id = `board-${uuidv4()}`;
+                const prop = 'bla';
+                const options = { id, pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' };
+                await etcd.tensorboard.set(options);
+                const res = await etcd.tensorboard.update({ id, pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' });
+                const etcdGet = await etcd.tensorboard.get(options);
+                expect(res).to.be.true;
+                expect(etcdGet).to.deep.equal({ ...options });
+            });
+            it('should delete specific board', async () => {
+                const options = { id: 'delete-board', pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' };
+                await etcd.tensorboard.set(options);
+                const deleteRes = await etcd.tensorboard.delete(options);
+                const getRes = await etcd.tensorboard.get(options);
+                expect(getRes).to.be.null;
+            });
+            it('should get builds list', async () => {
+                const name = 'list';
+                await etcd.tensorboard.set({ id: `${name}-board1`, pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' });
+                await etcd.tensorboard.set({ id: `${name}-board2`, pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' });
+                await etcd.tensorboard.set({ id: `board3`, pipelineName: 'pname', nodeName: 'nName', logDir: 'dddd' });
+                const list = await etcd.tensorboard.list({ id: name });
+                const every = list.every(l => l.id.startsWith(name));
+                expect(every).to.equal(true);
+                expect(list).to.have.lengthOf(2);
+            });
+        });
+    });
     describe('Jobs', () => {
         describe('JobResults', () => {
             describe('crud', () => {
