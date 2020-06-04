@@ -2263,7 +2263,7 @@ describe('Tests', () => {
                 const jobId5 = `jobId-tree-level-2.b`;
                 const jobId6 = `jobId-tree-level-3.a`;
 
-                await etcd.triggers.tree.set({ name: 'root', jobId: jobId1 });
+                await etcd.triggers.tree.set({ rootJobName: 'root', jobId: jobId1, rootJobId: jobId1 });
                 await etcd.triggers.tree.set({ name: 'level-1.a', jobId: jobId2, rootJobId: jobId1, parentJobId: jobId1 });
                 await etcd.triggers.tree.set({ name: 'level-1.b', jobId: jobId3, rootJobId: jobId1, parentJobId: jobId1 });
                 await etcd.triggers.tree.set({ name: 'level-2.a', jobId: jobId4, rootJobId: jobId1, parentJobId: jobId2 });
