@@ -1,82 +1,34 @@
-[
-    {
-        "name": "a",
-        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a",
-        "children": [
-            {
-                "name": "b",
-                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b",
-                "children": [
-                    {
-                        "name": "c",
-                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c",
-                        "children": [
-                            {
-                                "name": "d",
-                                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d",
-                                "children": [
-                                    {
-                                        "name": "e",
-                                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.e",
-                                        "children": [
-                                            {
-                                                "name": "f",
-                                                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.e.f"
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        "name": "g",
-                                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.g"
-                                    },
-                                    {
-                                        "name": "h",
-                                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.h",
-                                        "children": [
-                                            {
-                                                "name": "j",
-                                                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.h.j",
-                                                "children": [
-                                                    {
-                                                        "name": "k",
-                                                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.h.j.k",
-                                                        "children": [
-                                                            {
-                                                                "name": "l",
-                                                                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.h.j.k.l"
-                                                            },
-                                                            {
-                                                                "name": "o",
-                                                                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.h.j.k.o"
-                                                            },
-                                                            {
-                                                                "name": "p",
-                                                                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.h.j.k.p"
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        "name": "i",
-                                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.c.d.i"
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "name": "m",
-                        "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.b.m"
-                    }
-                ]
-            },
-            {
-                "name": "n",
-                "jobId": "57ec5c39-122b-4d7c-bc8f-580ba30df511.a.n"
-            }
-        ]
-    }
-]
+{
+    "name": "root",
+    "jobId": "jobId-tree-root",
+    "children": [
+        {
+            "name": "level-1.a",
+            "jobId": "jobId-tree-level-1.a",
+            "children": [
+                {
+                    "name": "level-2.a",
+                    "jobId": "jobId-tree-level-2.a",
+                    "children": [
+                        {
+                            "name": "level-3.a",
+                            "jobId": "jobId-tree-level-3.a",
+                            "children": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "level-1.b",
+            "jobId": "jobId-tree-level-1.b",
+            "children": [
+                {
+                    "name": "level-2.b",
+                    "jobId": "jobId-tree-level-2.b",
+                    "children": []
+                }
+            ]
+        }
+    ]
+}
