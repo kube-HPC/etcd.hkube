@@ -12,6 +12,10 @@ const SERVICE_NAME = 'my-test-service';
 const config = { host: 'localhost', port: '4001', serviceName: SERVICE_NAME };
 
 describe('Tests', () => {
+    before(async () => {
+        etcd = new Etcd(config);
+        await etcd._client.client.delete().all();
+    });
     beforeEach(() => {
         etcd = new Etcd(config);
         _semaphore = new Semaphore();
@@ -862,7 +866,8 @@ describe('Tests', () => {
                 it('should watch change algorithmQueue', async () => {
                     const options = { name: 'green-alg', data: 'bla' };
                     await etcd.algorithms.queue.watch(options);
-                    etcd.algorithms.queue.on('change', (res) => {
+                    etcd.algorithms.queue.on('change', async (res) => {
+                        await etcd.algorithms.queue.unwatch(options);
                         expect(res).to.deep.equal(options);
                         _semaphore.callDone();
                     });
@@ -1546,26 +1551,6 @@ describe('Tests', () => {
                     const every = list.every(l => l.jobId.startsWith(jobId));
                     expect(list).to.have.lengthOf(limit);
                     expect(every).to.equal(true);
-                });
-                it('should get executions tree', async () => {
-                    const prefix = '57ec5c39-122b-4d7c-bc8f-580ba30df511';
-                    await Promise.all([
-                        etcd.jobs.status.set({ jobId: `${prefix}.a`, data: { data: 'a' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c`, data: { data: 'c' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d`, data: { data: 'd' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.e`, data: { data: 'e' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.e.f`, data: { data: 'f' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.g`, data: { data: 'g' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.h`, data: { data: 'h' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.i`, data: { data: 'i' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.h.j.k.l`, data: { data: 'l' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.h.j.k.o`, data: { data: 'o' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.c.d.h.j.k.p`, data: { data: 'p' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.b.m`, data: { data: 'm' } }),
-                        etcd.jobs.status.set({ jobId: `${prefix}.a.n`, data: { data: 'n' } })
-                    ]);
-                    const result = await etcd.jobs.status.getExecutionsTree({ jobId: `${prefix}.a` });
-                    expect(result).to.deep.equal(triggersTreeExpected);
                 });
             });
             describe('watch', () => {
@@ -2265,6 +2250,28 @@ describe('Tests', () => {
                     _semaphore.callDone();
                 }
                 await _semaphore.done();
+            });
+        });
+    });
+    describe('Triggers', () => {
+        describe('crud', () => {
+            it('should set status', async () => {
+                const jobId1 = `jobId-tree-root`;
+                const jobId2 = `jobId-tree-level-1.a`;
+                const jobId3 = `jobId-tree-level-1.b`;
+                const jobId4 = `jobId-tree-level-2.a`;
+                const jobId5 = `jobId-tree-level-2.b`;
+                const jobId6 = `jobId-tree-level-3.a`;
+
+                await etcd.triggers.tree.set({ rootJobName: 'root', jobId: jobId1, rootJobId: jobId1 });
+                await etcd.triggers.tree.set({ name: 'level-1.a', jobId: jobId2, rootJobId: jobId1, parentJobId: jobId1 });
+                await etcd.triggers.tree.set({ name: 'level-1.b', jobId: jobId3, rootJobId: jobId1, parentJobId: jobId1 });
+                await etcd.triggers.tree.set({ name: 'level-2.a', jobId: jobId4, rootJobId: jobId1, parentJobId: jobId2 });
+                await etcd.triggers.tree.set({ name: 'level-2.b', jobId: jobId5, rootJobId: jobId1, parentJobId: jobId3 });
+                await etcd.triggers.tree.set({ name: 'level-3.a', jobId: jobId6, rootJobId: jobId1, parentJobId: jobId4 });
+
+                const tree = await etcd.triggers.tree.get({ jobId: jobId1 });
+                expect(tree).to.eql(triggersTreeExpected);
             });
         });
     });
