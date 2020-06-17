@@ -2275,4 +2275,42 @@ describe('Tests', () => {
             });
         });
     });
+    describe('Events', () => {
+        describe('crud', () => {
+            it('should set and get event', async () => {
+                const data = {
+                    name: 'execution',
+                    progressHook: 'string',
+                    resultHook: 'string'
+                };
+                const eventId = await etcd.events.set(data);
+                const result = await etcd.events.get({ eventId });
+                expect(result).to.eql({ ...data, eventId });
+            });
+            it('should delete specific event', async () => {
+                const data = {
+                    name: 'execution',
+                    progressHook: 'string',
+                    resultHook: 'string'
+                };
+                const eventId = await etcd.events.set(data);
+                await etcd.events.delete({ eventId });
+                const result = await etcd.events.get({ eventId });
+                expect(result).to.be.null;
+            });
+        });
+        describe('watch', () => {
+            it('should watch events', async () => {
+                let eventId;
+                await etcd.events.watch();
+                etcd.events.on('change', async (res) => {
+                    await delay(1000);
+                    expect(res.eventId).to.equal(eventId);
+                    _semaphore.callDone();
+                });
+                eventId = await etcd.events.set({ progressHook: 'string' });
+                await _semaphore.done();
+            });
+        });
+    });
 });
