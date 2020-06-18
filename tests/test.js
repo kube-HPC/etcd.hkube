@@ -2279,19 +2279,25 @@ describe('Tests', () => {
         describe('crud', () => {
             it('should set and get event', async () => {
                 const data = {
-                    name: 'execution',
-                    progressHook: 'string',
-                    resultHook: 'string'
+                    reason: 'reason',
+                    message: 'message'
                 };
                 const eventId = await etcd.events.set(data);
                 const result = await etcd.events.get({ eventId });
-                expect(result).to.eql({ ...data, eventId });
+                expect(result).to.have.property('eventId');
+                expect(result).to.have.property('timestamp');
+                expect(result).to.have.property('source');
+                expect(result).to.have.property('type');
+                expect(result).to.have.property('reason');
+                expect(result).to.have.property('message');
+                expect(result.reason).to.equal(data.reason);
+                expect(result.message).to.equal(data.message);
+
             });
             it('should delete specific event', async () => {
                 const data = {
-                    name: 'execution',
-                    progressHook: 'string',
-                    resultHook: 'string'
+                    reason: 'string',
+                    message: 'execution'
                 };
                 const eventId = await etcd.events.set(data);
                 await etcd.events.delete({ eventId });
@@ -2308,7 +2314,7 @@ describe('Tests', () => {
                     expect(res.eventId).to.equal(eventId);
                     _semaphore.callDone();
                 });
-                eventId = await etcd.events.set({ progressHook: 'string' });
+                eventId = await etcd.events.set({ reason: 'reason', message: 'message' });
                 await _semaphore.done();
             });
         });
