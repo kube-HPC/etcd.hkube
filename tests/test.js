@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 const delay = require('await-delay');
-const uuidv4 = require('uuid/v4');
+const { uuid: uuidv4 } = require('@hkube/uid');
 const Etcd = require('../index');
 const triggersTreeExpected = require('./mocks/triggers-tree.json');
 const Semaphore = require('await-done').semaphore;
@@ -2279,12 +2279,11 @@ describe('Tests', () => {
         describe('crud', () => {
             it('should set and get event', async () => {
                 const data = {
-                    algorithmName: 'green-alg',
                     reason: 'reason',
                     message: 'message'
                 };
-                const eventId = await etcd.events.algorithms.set(data);
-                const result = await etcd.events.algorithms.get({ eventId, algorithmName: data.algorithmName });
+                const eventId = await etcd.events.set(data);
+                const result = await etcd.events.get({ eventId });
                 expect(result).to.have.property('eventId');
                 expect(result).to.have.property('timestamp');
                 expect(result).to.have.property('source');
@@ -2296,53 +2295,38 @@ describe('Tests', () => {
             });
             it('should delete specific event', async () => {
                 const data = {
-                    algorithmName: 'green-alg',
                     reason: 'string',
                     message: 'execution'
                 };
-                const eventId = await etcd.events.algorithms.set(data);
-                await etcd.events.algorithms.delete({ eventId, algorithmName: data.algorithmName });
-                const result = await etcd.events.algorithms.get({ eventId, algorithmName: data.algorithmName });
+                const eventId = await etcd.events.set(data);
+                await etcd.events.delete({ eventId });
+                const result = await etcd.events.get({ eventId });
                 expect(result).to.be.null;
-            });
-            it('should delete all events of algorithm', async () => {
-                const data = {
-                    algorithmName: 'new-alg',
-                    reason: 'string',
-                    message: 'execution'
-                };
-                await etcd.events.algorithms.set(data);
-                await etcd.events.algorithms.set(data);
-                await etcd.events.algorithms.set(data);
-                const all = await etcd.events.algorithms.list(data);
-                await etcd.events.algorithms.delete(data);
-                const none = await etcd.events.algorithms.list(data);
-                expect(all).to.have.lengthOf(3);
-                expect(none).to.have.lengthOf(0);
             });
             it('should delete all events', async () => {
                 const data = {
-                    algorithmName: 'new-alg',
                     reason: 'string',
                     message: 'execution'
                 };
-                await etcd.events.algorithms.set(data);
-                await etcd.events.algorithms.set(data);
-                await etcd.events.algorithms.set(data);
-                const all = await etcd.events.algorithms.list();
-                expect(all.length).to.be.greaterThan(3);
+                await etcd.events.set(data);
+                await etcd.events.set(data);
+                await etcd.events.set(data);
+                const all = await etcd.events.list();
+                await Promise.all(all.map(e => etcd.events.delete({ eventId: e.eventId })));
+                const none = await etcd.events.list();
+                expect(none).to.have.lengthOf(0);
             });
         });
         describe('watch', () => {
             it('should watch events', async () => {
                 let eventId;
-                await etcd.events.algorithms.watch();
-                etcd.events.algorithms.on('change', async (res) => {
+                await etcd.events.watch();
+                etcd.events.on('change', async (res) => {
                     await delay(1000);
                     expect(res.eventId).to.equal(eventId);
                     _semaphore.callDone();
                 });
-                eventId = await etcd.events.algorithms.set({ algorithmName: 'green-alg', reason: 'reason', message: 'message' });
+                eventId = await etcd.events.set({ reason: 'reason', message: 'message' });
                 await _semaphore.done();
             });
         });

@@ -19,12 +19,12 @@
   "author": "Hkube",
   "license": "ISC",
   "dependencies": {
+    "@hkube/uid": "^1.0.4",
     "ajv": "^6.10.2",
     "etcd3": "^0.2.13",
     "lodash.merge": "^4.6.2",
     "moment": "^2.24.0",
-    "string-template": "^1.0.0",
-    "uuid": "^3.3.3"
+    "string-template": "^1.0.0"
   },
   "devDependencies": {
     "await-delay": "^1.0.0",
