@@ -1198,6 +1198,21 @@ describe('Tests', () => {
                     expect(result).to.be.null;
                 });
             });
+            describe('locks', () => {
+                it('should lock and release success', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    const data = {
+                        name: 'execution'
+                    };
+                    const lock1 = await etcd.executions.stored.acquireLock({ jobId, data });
+                    const lock2 = await etcd.executions.stored.acquireLock({ jobId, data });
+                    await etcd.executions.stored.releaseLock({ jobId, data });
+                    const lock4 = await etcd.executions.stored.acquireLock({ jobId, data });
+                    expect(lock1.success).to.eql(true);
+                    expect(lock2.success).to.eql(false);
+                    expect(lock4.success).to.eql(true);
+                });
+            });
             describe('watch', () => {
                 it('should watch execution', async () => {
                     const jobId = `jobid-${uuidv4()}`;
