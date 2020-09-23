@@ -22,7 +22,7 @@
     "@hkube/uid": "^1.0.4",
     "ajv": "^6.10.2",
     "cockatiel": "^1.1.1",
-    "etcd3": "^1.0.1",
+    "etcd3": "^1.0.2",
     "lodash.merge": "^4.6.2",
     "moment": "^2.24.0",
     "string-template": "^1.0.0"

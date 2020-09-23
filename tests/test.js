@@ -20,6 +20,29 @@ describe('Tests', () => {
         etcd = new Etcd(config);
         _semaphore = new Semaphore();
     });
+    describe('Init',()=>{
+        it('should set timeout timeout', async ()=>{
+            const etcd1 = new Etcd({...config, timeout: 20000});
+            const now=Date.now();
+            const {deadline} = etcd1._client.client.options.defaultCallOptions({isStream: false});
+            expect(deadline).to.be.within(now,now+20000)
+        })
+        it('should ignore undefined timeout', async ()=>{
+            const etcd1 = new Etcd({...config, timeout: 0});
+            const now=Date.now();
+            const options = etcd1._client.client.options.defaultCallOptions({isStream: false});
+            expect(options).to.eql({})
+        })
+        it('should add clientOptions', async ()=>{
+            const etcd1 = new Etcd({
+                ...config,
+                timeout: 0,
+                clientOptions: {defaultCallOptions: ()=>({deadline:10})}
+            });
+            const {deadline} = etcd1._client.client.options.defaultCallOptions({isStream: false});
+            expect(deadline).to.eql(10)
+        })
+    })
     describe('Stress', () => {
         it('should put and get large object', async () => {
             const array = [];
