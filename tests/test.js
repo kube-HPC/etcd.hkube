@@ -333,7 +333,7 @@ describe('Tests', () => {
                     await etcd.algorithms.builds.set({ buildId: `${name}-1-alg`, ...data });
                     await etcd.algorithms.builds.set({ buildId: `${name}-2-alg`, ...data });
                     await etcd.algorithms.builds.set({ buildId: `${name}-3-alg`, ...data });
-                    const keys = await etcd.algorithms.builds.list({ buildId: name, keysOnly: true });
+                    const keys = await etcd.algorithms.builds.keys({ buildId: name });
                     expect(keys).to.have.lengthOf(3)
                     expect(keys).to.deep.include(`/algorithms/builds/${name}-1-alg`)
                     expect(keys).to.deep.include(`/algorithms/builds/${name}-2-alg`)
@@ -924,7 +924,7 @@ describe('Tests', () => {
                     const name = 'list';
                     await etcd.algorithms.queue.set({ name: `${name}-1-alg`, data: 'bla' });
                     await etcd.algorithms.queue.set({ name: `${name}-2-alg`, data: 'bla' });
-                    const count = await etcd.algorithms.queue.count({ name, keysOnly: true });
+                    const count = await etcd.algorithms.queue.count({ name });
                     expect(count).to.equal(2);
                 });
             });
