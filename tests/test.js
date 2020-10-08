@@ -20,26 +20,26 @@ describe('Tests', () => {
         etcd = new Etcd(config);
         _semaphore = new Semaphore();
     });
-    describe('Init',()=>{
-        it('should set timeout timeout', async ()=>{
-            const etcd1 = new Etcd({...config, timeout: 20000});
-            const now=Date.now();
-            const {deadline} = etcd1._client.client.options.defaultCallOptions({isStream: false});
-            expect(deadline).to.be.within(now,now+20000)
+    describe('Init', () => {
+        it('should set timeout timeout', async () => {
+            const etcd1 = new Etcd({ ...config, timeout: 20000 });
+            const now = Date.now();
+            const { deadline } = etcd1._client.client.options.defaultCallOptions({ isStream: false });
+            expect(deadline).to.be.within(now, now + 20000)
         })
-        it('should ignore undefined timeout', async ()=>{
-            const etcd1 = new Etcd({...config, timeout: 0});
-            const now=Date.now();
-            const options = etcd1._client.client.options.defaultCallOptions({isStream: false});
+        it('should ignore undefined timeout', async () => {
+            const etcd1 = new Etcd({ ...config, timeout: 0 });
+            const now = Date.now();
+            const options = etcd1._client.client.options.defaultCallOptions({ isStream: false });
             expect(options).to.eql({})
         })
-        it('should add clientOptions', async ()=>{
+        it('should add clientOptions', async () => {
             const etcd1 = new Etcd({
                 ...config,
                 timeout: 0,
-                clientOptions: {defaultCallOptions: ()=>({deadline:10})}
+                clientOptions: { defaultCallOptions: () => ({ deadline: 10 }) }
             });
-            const {deadline} = etcd1._client.client.options.defaultCallOptions({isStream: false});
+            const { deadline } = etcd1._client.client.options.defaultCallOptions({ isStream: false });
             expect(deadline).to.eql(10)
         })
     })
@@ -318,6 +318,27 @@ describe('Tests', () => {
                     expect(every).to.equal(true);
                     expect(list).to.have.lengthOf(2);
                 });
+                it('should get builds list key count', async () => {
+                    const name = 'list';
+                    const data = { name, data: 'bla' };
+                    await etcd.algorithms.builds.set({ buildId: `${name}-1-alg`, ...data });
+                    await etcd.algorithms.builds.set({ buildId: `${name}-2-alg`, ...data });
+                    await etcd.algorithms.builds.set({ buildId: `${name}-3-alg`, ...data });
+                    const count = await etcd.algorithms.builds.count({ buildId: name });
+                    expect(count).to.equal(3);
+                });
+                it('should get builds list keys only', async () => {
+                    const name = 'list';
+                    const data = { name, data: 'bla' };
+                    await etcd.algorithms.builds.set({ buildId: `${name}-1-alg`, ...data });
+                    await etcd.algorithms.builds.set({ buildId: `${name}-2-alg`, ...data });
+                    await etcd.algorithms.builds.set({ buildId: `${name}-3-alg`, ...data });
+                    const keys = await etcd.algorithms.builds.list({ buildId: name, keysOnly: true });
+                    expect(keys).to.have.lengthOf(3)
+                    expect(keys).to.deep.include(`/algorithms/builds/${name}-1-alg`)
+                    expect(keys).to.deep.include(`/algorithms/builds/${name}-2-alg`)
+                    expect(keys).to.deep.include(`/algorithms/builds/${name}-3-alg`)
+                });
             });
             describe('watch', () => {
                 it('should watch change builds', async () => {
@@ -453,6 +474,14 @@ describe('Tests', () => {
                     expect(every).to.equal(true);
                     expect(list).to.have.lengthOf(2);
                 });
+                it('should get debug list key count', async () => {
+                    const name = 'list';
+                    const data = { name, data: 'bla' };
+                    await etcd.algorithms.debug.set({ name: `${name}-1-alg`, data });
+                    await etcd.algorithms.debug.set({ name: `${name}-2-alg`, data });
+                    const count = await etcd.algorithms.debug.count({ name });
+                    expect(count).to.equal(2);
+                });
             });
             describe('watch', () => {
                 it('should watch change debug', async () => {
@@ -572,6 +601,13 @@ describe('Tests', () => {
                     const every = list.every(l => l.jobId === jobId);
                     expect(every).to.equal(true);
                     expect(list).to.have.lengthOf(2);
+                });
+                it('should get execution list key count', async () => {
+                    const jobId = `jobid-${uuidv4()}`;
+                    await etcd.algorithms.executions.set({ jobId, taskId: `taskId-${uuidv4()}`, data: `bla-${uuidv4()}` });
+                    await etcd.algorithms.executions.set({ jobId, taskId: `taskId-${uuidv4()}`, data: `bla-${uuidv4()}` });
+                    const count = await etcd.algorithms.executions.count({ jobId });
+                    expect(count).to.eql(2);
                 });
             });
             describe('watch', () => {
@@ -883,6 +919,13 @@ describe('Tests', () => {
                     await etcd.algorithms.queue.set({ name: `${name}-2-alg`, data: 'bla' });
                     const list = await etcd.algorithms.queue.list({ name });
                     expect(list).to.have.lengthOf(2);
+                });
+                it('should get algorithmQueue list key count', async () => {
+                    const name = 'list';
+                    await etcd.algorithms.queue.set({ name: `${name}-1-alg`, data: 'bla' });
+                    await etcd.algorithms.queue.set({ name: `${name}-2-alg`, data: 'bla' });
+                    const count = await etcd.algorithms.queue.count({ name, keysOnly: true });
+                    expect(count).to.equal(2);
                 });
             });
             describe('watch', () => {
