@@ -1006,22 +1006,25 @@ describe('Tests', () => {
         describe('Versions', () => {
             describe('crud', () => {
                 it('should create version', async () => {
-                    const options = { name: 'get-alg', data: { prop: 'bla' } };
-                    const id = await etcd.algorithms.versions.create(options);
-                    const etcdGet = await etcd.algorithms.versions.get({ ...options, id });
-                    expect(etcdGet).to.eql({ ...options, id });
+                    const algorithm = { name: 'get-alg', data: { prop: 'bla' } };
+                    const id = await etcd.algorithms.versions.create(algorithm);
+                    const etcdGet = await etcd.algorithms.versions.get({ id, name: algorithm.name });
+                    const { created, ...version } = etcdGet;
+                    expect(version).to.eql({ id, name: algorithm.name, algorithm });
                 });
-                it('should get and set specific version', async () => {
-                    const options = { name: 'get-alg', data: { name: 'bla' } };
-                    const id = await etcd.algorithms.versions.create(options);
-                    const etcdGet = await etcd.algorithms.versions.get({ ...options, id });
-                    expect(etcdGet).to.eql({ ...options, id });
+                it('should update specific version', async () => {
+                    const algorithm = { name: 'get-alg', data: { name: 'bla' } };
+                    const id = await etcd.algorithms.versions.create(algorithm);
+                    await etcd.algorithms.versions.update({ id, name: algorithm.name, pinned: true, tags: ['fast'] });
+                    const etcdGet = await etcd.algorithms.versions.get({ id, name: algorithm.name });
+                    expect(etcdGet.pinned).to.eql(true);
+                    expect(etcdGet.tags).to.eql(['fast']);
                 });
                 it('should delete specific version', async () => {
-                    const options = { name: 'delete-alg', data: { name: 'bla' } };
-                    const id = await etcd.algorithms.versions.create(options);
-                    await etcd.algorithms.versions.delete({ ...options, id });
-                    const etcdGet = await etcd.algorithms.versions.get({ ...options, id });
+                    const algorithm = { name: 'delete-alg', data: { name: 'bla' } };
+                    const id = await etcd.algorithms.versions.create(algorithm);
+                    await etcd.algorithms.versions.delete({ id, name: algorithm.name });
+                    const etcdGet = await etcd.algorithms.versions.get({ id, name: algorithm.name });
                     expect(etcdGet).to.be.null;
                 });
                 it('should get version list', async () => {
@@ -1074,10 +1077,11 @@ describe('Tests', () => {
                     await _semaphore.done();
                 });
                 it('should get data when call to watch', async () => {
-                    const options = { name: 'blue-alg', data: { name: 'bla' } };
-                    const id = await etcd.algorithms.versions.create(options);
-                    const etcdGet = await etcd.algorithms.versions.watch({ ...options, id });
-                    expect(etcdGet).to.eql({ ...options, id });
+                    const algorithm = { name: 'blue-alg', data: { name: 'bla' } };
+                    const id = await etcd.algorithms.versions.create(algorithm);
+                    const etcdGet = await etcd.algorithms.versions.watch({ id, name: algorithm.name });
+                    const { created, ...version } = etcdGet;
+                    expect(version).to.eql({ id, name: algorithm.name, algorithm });
                 });
                 it('should watch all version', async () => {
                     const options = { name: 'yellow-alg', data: { name: 'bla' } };
