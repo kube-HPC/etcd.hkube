@@ -13,6 +13,7 @@ algorithms
      queue
      requirements
      store
+     versions
 
 discovery
 
