@@ -1,6 +1,6 @@
 {
   "name": "@hkube/etcd",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "etcd state management client for HKube",
   "main": "index.js",
   "scripts": {
