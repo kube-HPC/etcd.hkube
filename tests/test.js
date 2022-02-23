@@ -187,7 +187,7 @@ describe('Tests', () => {
             const putEvent = sinon.spy();
             const changeEvent = sinon.spy();
             const deleteEvent = sinon.spy();
-            const watch = await etcd._client.watcher.watch(pathToWatch);
+            const watch = await etcd._client.watcher.getAndWatch(pathToWatch);
             expect(watch).to.have.property('watcher');
             expect(watch).to.have.property('data');
             watch.watcher.on('disconnected', () => console.log('disconnected...'));
@@ -1648,14 +1648,17 @@ describe('Tests', () => {
             describe('watch', () => {
                 it('should watch job status', async () => {
                     const jobId = `jobid-${uuidv4()}`;
-                    const data = { data: { status: 'completed' } };
-                    await etcd.jobs.status.watch({ jobId });
+                    const data1 = { data: { status: 'pending' } };
+                    const data2 = { data: { status: 'completed' } };
+                    await etcd.jobs.status.set({ data: data1, jobId });
+                    const currentData = await etcd.jobs.status.watch({ jobId });
+                    expect(currentData.data).to.deep.equal(data1);
                     etcd.jobs.status.on('change', (res) => {
                         expect(res.jobId).to.deep.equal(jobId);
-                        expect(res.data.data).to.deep.equal(data.data);
+                        expect(res.data.data).to.deep.equal(data2.data);
                         _semaphore.callDone();
                     });
-                    await etcd.jobs.status.set({ data, jobId });
+                    await etcd.jobs.status.set({ data: data2, jobId });
                     await _semaphore.done();
                 });
                 it('should single watch for change job status', async () => {
