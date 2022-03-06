@@ -5,7 +5,7 @@ const { uuid: uuidv4 } = require('@hkube/uid');
 const Etcd = require('../index');
 const triggersTreeExpected = require('./mocks/triggers-tree.json');
 const Semaphore = require('await-done').semaphore;
-
+const { GRPCGenericError } = require('etcd3');
 let etcd;
 let _semaphore;
 const SERVICE_NAME = 'my-test-service';
@@ -2423,6 +2423,12 @@ describe('Tests', () => {
                 });
                 eventId = await etcd.events.set({ reason: 'reason', message: 'message' });
                 await _semaphore.done();
+            });
+        });
+        describe('isFatal', () => {
+            it('return isFatal true on etcd problem', async () => {
+                expect(etcd.isFatal(new Error())).to.eql(false);
+                expect(etcd.isFatal(new GRPCGenericError())).to.eql(true);
             });
         });
     });
