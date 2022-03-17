@@ -1562,13 +1562,37 @@ describe('Tests', () => {
                     const state = 'started';
                     const jobId = `jobid-${uuidv4()}`;
                     await etcd.jobs.results.watch({ jobId });
+                    expect(etcd.watcher._pathToWatch.get(`/jobs/results/${jobId}`)).to.include.property('watcher');
+                    expect(etcd.watcher._pathToWatch.get(`/jobs/results/${jobId}`)).to.include.property('errorHandler');
                     etcd.jobs.results.on('change', () => {
                         isCalled = true;
                     });
                     await etcd.jobs.results.unwatch({ jobId });
+                    expect(etcd.watcher._pathToWatch.get(`/jobs/results/${jobId}`)).to.not.exist;
                     etcd.jobs.results.set({ data: state, jobId });
                     await delay(100);
                     expect(isCalled).to.equal(false);
+                });
+            });
+            describe('handle error', () => {
+                it('should raise error if watch is canceled', async () => {
+                    let isCalled = false;
+                    const state = 'started';
+                    const jobId = `jobid-${uuidv4()}`;
+                    await etcd.jobs.results.watch({ jobId });
+                    etcd.watcher.on('error', (err, path)=>{
+                        expect(err.message).to.eql('Watch Error');
+                        expect(path).to.eql(`/jobs/results/${jobId}`)
+                        isCalled = true;
+                    })
+                    const watcher1 = etcd.watcher._pathToWatch.get(`/jobs/results/${jobId}`);
+                    watcher1.watcher.emit('error',new Error('Watch Error'));
+                    await delay(100);
+                    expect(isCalled).to.equal(true);
+                    await etcd.jobs.results.unwatch({ jobId });
+                    expect(watcher1.watcher._events.error).to.not.exist;
+                    expect(etcd.watcher._pathToWatch.get(`/jobs/results/${jobId}`)).to.not.exist;
+                    
                 });
             });
         });
