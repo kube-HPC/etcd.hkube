@@ -20,7 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@hkube/uid": "^1.0.4",
-    "ajv": "^6.10.2",
+    "ajv": "^6.12.6",
     "cockatiel": "^1.1.1",
     "etcd3": "^1.0.2",
     "lodash.merge": "^4.6.2",
