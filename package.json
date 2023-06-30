@@ -24,7 +24,7 @@
     "cockatiel": "^1.1.1",
     "etcd3": "^1.0.2",
     "lodash.merge": "^4.6.2",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "string-template": "^1.0.0"
   },
   "devDependencies": {
