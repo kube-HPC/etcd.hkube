@@ -1109,6 +1109,113 @@ describe('Tests', () => {
                 });
             });
         });
+        describe('Graceful', () => {
+            describe('crud', () => {
+                it('should throw validation error on get without name', () => {
+                    const options = { nonProperty: 'green-alg' };
+                    expect(() => etcd.algorithms.graceful.get(options)).to.throw(`data should have required property 'name'`);
+                });
+                it('should throw validation error on set without name', async () => {
+                    const options = { jobIds: ['job1'] };
+                    try {
+                        await etcd.algorithms.graceful.set(options);
+                        expect.fail('should have thrown');
+                    } catch (e) {
+                        expect(e.message).to.equal(`data should have required property 'name'`);
+                    }
+                });
+                it('should set and get graceful jobs', async () => {
+                    const options = { name: 'graceful-alg', jobIds: ['job-1', 'job-2'] };
+                    await etcd.algorithms.graceful.set(options);
+                    const result = await etcd.algorithms.graceful.get({ name: options.name });
+                    expect(result.jobIds).to.deep.equal(options.jobIds);
+                });
+                it('should return null for non-existent graceful entry', async () => {
+                    const result = await etcd.algorithms.graceful.get({ name: 'no-such-alg' });
+                    expect(result).to.be.null;
+                });
+                it('should overwrite graceful jobs on re-set', async () => {
+                    const name = `graceful-overwrite-${uuidv4()}`;
+                    await etcd.algorithms.graceful.set({ name, jobIds: ['job-1'] });
+                    await etcd.algorithms.graceful.set({ name, jobIds: ['job-2', 'job-3'] });
+                    const result = await etcd.algorithms.graceful.get({ name });
+                    expect(result.jobIds).to.deep.equal(['job-2', 'job-3']);
+                });
+                it('should delete graceful entry', async () => {
+                    const name = `graceful-delete-${uuidv4()}`;
+                    await etcd.algorithms.graceful.set({ name, jobIds: ['job-1'] });
+                    await etcd.algorithms.graceful.delete({ name });
+                    const result = await etcd.algorithms.graceful.get({ name });
+                    expect(result).to.be.null;
+                });
+                it('should set graceful with empty jobIds', async () => {
+                    const name = `graceful-empty-${uuidv4()}`;
+                    await etcd.algorithms.graceful.set({ name, jobIds: [] });
+                    const result = await etcd.algorithms.graceful.get({ name });
+                    expect(result.jobIds).to.deep.equal([]);
+                });
+            });
+            describe('getAll', () => {
+                it('should get graceful jobs for multiple algorithms', async () => {
+                    const name1 = `graceful-all-1-${uuidv4()}`;
+                    const name2 = `graceful-all-2-${uuidv4()}`;
+                    await etcd.algorithms.graceful.set({ name: name1, jobIds: ['job-a', 'job-b'] });
+                    await etcd.algorithms.graceful.set({ name: name2, jobIds: ['job-c'] });
+                    const result = await etcd.algorithms.graceful.getAll([name1, name2]);
+                    expect(result[name1]).to.deep.equal(['job-a', 'job-b']);
+                    expect(result[name2]).to.deep.equal(['job-c']);
+                });
+                it('should return empty arrays for algorithms with no graceful entry', async () => {
+                    const name1 = `graceful-exists-${uuidv4()}`;
+                    const name2 = `graceful-missing-${uuidv4()}`;
+                    await etcd.algorithms.graceful.set({ name: name1, jobIds: ['job-x'] });
+                    const result = await etcd.algorithms.graceful.getAll([name1, name2]);
+                    expect(result[name1]).to.deep.equal(['job-x']);
+                    expect(result[name2]).to.deep.equal([]);
+                });
+                it('should return empty object for empty algorithm list', async () => {
+                    const result = await etcd.algorithms.graceful.getAll([]);
+                    expect(result).to.deep.equal({});
+                });
+            });
+            describe('watch', () => {
+                it('should watch graceful changes', async () => {
+                    const name = `graceful-watch-${uuidv4()}`;
+                    const options = { name, jobIds: ['job-1'] };
+                    await etcd.algorithms.graceful.watch({ name });
+                    etcd.algorithms.graceful.on('change', (res) => {
+                        expect(res.jobIds).to.deep.equal(options.jobIds);
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.graceful.set(options);
+                    await _semaphore.done();
+                });
+                it('should watch graceful delete', async () => {
+                    const name = `graceful-watch-del-${uuidv4()}`;
+                    await etcd.algorithms.graceful.set({ name, jobIds: ['job-1'] });
+                    await etcd.algorithms.graceful.watch({ name });
+                    etcd.algorithms.graceful.on('delete', (res) => {
+                        _semaphore.callDone();
+                    });
+                    await etcd.algorithms.graceful.delete({ name });
+                    await _semaphore.done();
+                });
+            });
+            describe('unwatch', () => {
+                it('should unwatch graceful', async () => {
+                    let isCalled = false;
+                    const name = `graceful-unwatch-${uuidv4()}`;
+                    await etcd.algorithms.graceful.watch({ name });
+                    etcd.algorithms.graceful.on('change', () => {
+                        isCalled = true;
+                    });
+                    await etcd.algorithms.graceful.unwatch({ name });
+                    await etcd.algorithms.graceful.set({ name, jobIds: ['job-1'] });
+                    await delay(100);
+                    expect(isCalled).to.equal(false);
+                });
+            });
+        });
     });
     describe('Discovery', () => {
         describe('crud', () => {
