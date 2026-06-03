@@ -18,6 +18,10 @@
   },
   "author": "Hkube",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kube-HPC/etcd.hkube"
+  },
   "dependencies": {
     "@hkube/uid": "^1.0.4",
     "ajv": "^6.10.2",
